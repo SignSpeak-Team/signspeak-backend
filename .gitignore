@@ -1,0 +1,45 @@
+# created by virtualenv automatically
+.venv/Lib
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+ENV/
+
+# PyCharm
+.idea/
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# ML Models (son muy grandes)
+*.h5
+*.pkl
+*.joblib
+data/raw/*
+data/processed/*
+models/*.h5
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+*.tmp
