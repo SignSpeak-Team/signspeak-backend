@@ -1,0 +1,21 @@
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# HTTP Client (para comunicarse con otros servicios)
+httpx==0.25.1
+
+# Validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Authentication (lo usaremos después)
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Rate Limiting (lo usaremos después)
+slowapi==0.1.9
+
