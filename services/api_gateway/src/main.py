@@ -3,8 +3,8 @@ API Gateway - Punto de entrada principal
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api_gateway.src.settings import settings
-from api_gateway.src.routes import health
+from settings import settings
+from routes import health, translate
 
 app = FastAPI(
     title=settings.SERVICE_NAME,
@@ -25,6 +25,7 @@ app.add_middleware(
 
 # Registrar routers
 app.include_router(health.router)
+app.include_router(translate.router)
 
 
 @app.on_event("startup")
