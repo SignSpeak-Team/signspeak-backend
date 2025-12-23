@@ -2,6 +2,8 @@
 Health Check Endpoints
 """
 from fastapi import APIRouter
+from datetime import datetime, timedelta
+from api_gateway.src.settings import settings
 
 
 # Crear router
@@ -30,4 +32,25 @@ async def health_check():
         "status": "healthy",
         "service": "API Gateway",
         "version": "1.0.0",
+    }
+
+
+@router.get("/status")
+async def system_status():
+    uptime_seconds = 7200
+    uptime = str(timedelta(seconds=uptime_seconds))
+
+    return {
+        "status": "operational",
+        "version": settings.SERVICE_NAME + " " + settings.VERSION,
+        "uptime": uptime,
+        "environment": settings.ENVIRONMENT,
+        "total_translations": 42,  # Simulado - luego será de BD
+        "active_services": {
+            "api_gateway": "healthy",
+            "translation_service": "not_implemented",
+            "ml_service": "not_implemented",
+            "storage_service": "not_implemented"
+        },
+        "timestamp": datetime.now().isoformat()
     }

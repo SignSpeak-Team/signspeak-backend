@@ -37,11 +37,6 @@ class TranslateRequest(BaseModel):
 
 
 class TranslateResponse(BaseModel):
-    """
-    Esquema para la respuesta de traducción
-
-    Esto es lo que la API DEVUELVE al cliente
-    """
     translation_id: str = Field(
         ...,
         description="ID único de la traducción"
@@ -65,7 +60,7 @@ class TranslateResponse(BaseModel):
     )
 
     created_at: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=datetime.utcnow,
         description="Fecha y hora de creación"
     )
 

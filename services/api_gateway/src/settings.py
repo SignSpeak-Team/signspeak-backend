@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Configuración del servidor
-    API_GATEWAY_HOST: str = "0.0.0.0"
+    API_GATEWAY_HOST: str = "127.0.0.1"
     API_GATEWAY_PORT: int = 8000
 
     # URLs de otros microservicios
