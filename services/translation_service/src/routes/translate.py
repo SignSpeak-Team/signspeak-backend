@@ -1,8 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from translation_service.src.schemas.translate import (
-    TranslateRequest,
-    TranslateResponse
-)
+from src.schemas.translate import TranslateRequest, TranslateResponse
+
 
 router = APIRouter(
     prefix="/api/v1/translate",

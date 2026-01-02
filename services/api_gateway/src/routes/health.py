@@ -3,7 +3,7 @@ Health Check Endpoints
 """
 from fastapi import APIRouter
 from datetime import datetime, timedelta
-from api_gateway.src.settings import settings
+from src.settings import settings
 
 
 # Crear router

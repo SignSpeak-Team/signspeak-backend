@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from translation_service.src.routes.translate import  router as translate_router
+from src.routes.translate import router as translate_router
+
 
 app = FastAPI(
     title="Translation Service",

@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  api-gateway:
+    build: ./services/api_gateway
+    container_name: api-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - translation-service
+    environment:
+      TRANSLATION_SERVICE_URL: http://translation-service:8001
+
+  translation-service:
+    build: ./services/translation_service
+    container_name: translation-service
+    ports:
+      - "8001:8001"

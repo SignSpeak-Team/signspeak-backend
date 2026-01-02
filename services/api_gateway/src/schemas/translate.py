@@ -5,11 +5,6 @@ from datetime import datetime
 
 
 class TranslateRequest(BaseModel):
-    """
-    Esquema para la petición de traducción
-
-    Esto es lo que el cliente ENVÍA a la API
-    """
     video_url: Optional[HttpUrl] = Field(
         None,
         description="URL del video a traducir (opcional por ahora)"
