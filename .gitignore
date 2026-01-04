@@ -1,45 +1,45 @@
-# created by virtualenv automatically
-.venv/Lib
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-.venv/
-env/
-ENV/
 
-# PyCharm
+# Virtual environments
+.venv/
+.venv1/
+env/
+venv/
+
+# IDE
 .idea/
 
 # Environment variables
 .env
 .env.local
-*.env
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# ==================================
+# DATASETS (descargar de Zenodo)
+# ==================================
+services/vision_service/datasets/lsm_zenodo/
 
-# ML Models (son muy grandes)
+# ==================================
+# ARCHIVOS GENERADOS (se regeneran)
+# ==================================
+# Datos procesados
+datasets/processed/*.npz
+*.npz
+
+# Modelos entrenados
+*.keras
 *.h5
-*.pkl
-*.joblib
-data/raw/*
-data/processed/*
-models/*.h5
+*.task
 
-# Logs
-*.log
-logs/
-
-# OS
+# ==================================
+# SISTEMA
+# ==================================
 .DS_Store
 Thumbs.db
-
-# Temporary
+*.log
 tmp/
 temp/
-*.tmp
