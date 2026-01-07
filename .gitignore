@@ -22,6 +22,11 @@ venv/
 # DATASETS (descargar de Zenodo)
 # ==================================
 services/vision_service/datasets/lsm_zenodo/
+services/vision_service/datasets/videos/
+services/vision_service/datasets/sequences/
+services/vision_service/datasets/processed/
+!services/vision_service/datasets/processed/letras_estaticas_training.png
+!services/vision_service/datasets/processed/lstm_training_history.png
 
 # ==================================
 # ARCHIVOS GENERADOS (se regeneran)

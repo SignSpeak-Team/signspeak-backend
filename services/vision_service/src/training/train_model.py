@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from keras.models import Sequential
@@ -52,9 +53,37 @@ history = model.fit(
     y_train_split,
     epochs=30,
     batch_size=32,
-    validation_data=(X_val, y_val)  # Datos de validacion mezclados
+    validation_data=(X_val, y_val)
 )
 
 # Guardar modelo
-model.save("../../datasets/processed/sign_model.keras")
+model.save(f"{DATA_PATH}/sign_model.keras")
 print("\nModelo guardado en: datasets/processed/sign_model.keras")
+
+# Generar graficas
+print("\nGenerando graficas...")
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+
+# Grafica de accuracy
+ax1.plot(history.history['accuracy'], label='Train')
+ax1.plot(history.history['val_accuracy'], label='Validation')
+ax1.set_title('Precision - Letras Estaticas (21)')
+ax1.set_xlabel('Epoca')
+ax1.set_ylabel('Accuracy')
+ax1.legend()
+ax1.grid(True)
+
+# Grafica de loss
+ax2.plot(history.history['loss'], label='Train')
+ax2.plot(history.history['val_loss'], label='Validation')
+ax2.set_title('Perdida - Letras Estaticas (21)')
+ax2.set_xlabel('Epoca')
+ax2.set_ylabel('Loss')
+ax2.legend()
+ax2.grid(True)
+
+plt.tight_layout()
+plt.savefig(f"{DATA_PATH}/letras_estaticas_training.png", dpi=150)
+print(f"Grafica guardada: {DATA_PATH}/letras_estaticas_training.png")
+
+print("\n[DONE] Entrenamiento completado")
