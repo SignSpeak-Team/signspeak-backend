@@ -13,7 +13,6 @@ BASE_PATH = Path(__file__).parent.parent  # vision_service/
 DATA_PATH = BASE_PATH / "datasets" / "processed"
 MODEL_PATH = Path(__file__).parent / "hand_landmarker.task"
 
-# Descargar modelo si no existe
 import urllib.request
 import os
 
@@ -23,11 +22,6 @@ if not os.path.exists(MODEL_PATH):
     urllib.request.urlretrieve(url, MODEL_PATH)
     print("Modelo descargado")
 
-# ============================================================
-# CARGAR MODELOS
-# ============================================================
-
-# Modelo estatico (21 letras)
 print("Cargando modelo estatico...")
 static_model = keras.models.load_model(f"{DATA_PATH}/sign_model.keras")
 with open(f"{DATA_PATH}/label_encoder.pkl", "rb") as f:
@@ -53,10 +47,11 @@ options = vision.HandLandmarkerOptions(
 detector = vision.HandLandmarker.create_from_options(options)
 
 # ============================================================
-# CONFIGURACION LSTM
+# CONFIGURACION LSTM OPTIMIZADA
 # ============================================================
-SEQUENCE_LENGTH = 30
+SEQUENCE_LENGTH = 15  # Reducido de 30 a 15 para detección más rápida
 NUM_FEATURES = 63
+PREDICTION_INTERVAL = 3  # Predecir cada N frames en lugar de todos
 frame_buffer = deque(maxlen=SEQUENCE_LENGTH)
 
 # Colores
@@ -123,6 +118,12 @@ current_letter = ""
 current_confidence = 0
 is_dynamic = False
 lstm_prediction_cooldown = 0
+frame_count = 0  # Contador para predicción selectiva
+
+# Cache de predicciones para reducir carga computacional
+last_static_pred = None
+last_static_letter = ""
+last_static_conf = 0
 
 while True:
     ret, frame = cap.read()
@@ -153,43 +154,88 @@ while True:
         # Agregar al buffer para LSTM
         frame_buffer.append(landmarks)
         
-        # Prediccion estatica (siempre)
-        static_pred = static_model.predict(np.array([landmarks]), verbose=0)
-        static_class = np.argmax(static_pred)
-        static_conf = static_pred[0][static_class] * 100
-        static_letter = static_idx_to_letter[static_class]
+        # DETECCIÓN DE MOVIMIENTO ACTIVO
+        # Si hay movimiento significativo, NO mostrar predicciones estáticas
+        has_movement = len(frame_buffer) >= 10 and detect_movement(frame_buffer)
         
-        # Prediccion dinamica (si hay suficientes frames y movimiento)
-        if len(frame_buffer) >= SEQUENCE_LENGTH and lstm_prediction_cooldown <= 0:
-            if detect_movement(frame_buffer):
-                # Predecir con LSTM
+        # OPTIMIZACIÓN 1: Predicción estática cada N frames (no todos)
+        # SOLO si NO hay movimiento activo
+        should_predict_static = (frame_count % PREDICTION_INTERVAL == 0) or \
+                               (is_dynamic and lstm_prediction_cooldown <= 2)
+        
+        if should_predict_static and not has_movement:
+            static_pred = static_model.predict(np.array([landmarks]), verbose=0)
+            static_class = np.argmax(static_pred)
+            last_static_conf = static_pred[0][static_class] * 100
+            last_static_letter = static_idx_to_letter[static_class]
+        
+        # Usar última predicción si no toca predecir este frame
+        static_letter = last_static_letter
+        static_conf = last_static_conf
+        
+        # OPTIMIZACIÓN 2 y 3: Ventana deslizante + predicción selectiva para LSTM
+        # Predecir cuando: (1) buffer lleno, (2) hay movimiento, (3) cada N frames, (4) no hay cooldown
+        if (len(frame_buffer) >= SEQUENCE_LENGTH and 
+            frame_count % PREDICTION_INTERVAL == 0 and 
+            lstm_prediction_cooldown <= 0):
+            
+            if has_movement:
+                # Predecir con LSTM (ventana deslizante)
                 sequence = np.array(list(frame_buffer))
                 lstm_pred = lstm_model.predict(np.array([sequence]), verbose=0)
                 lstm_class = np.argmax(lstm_pred)
                 lstm_conf = lstm_pred[0][lstm_class] * 100
                 lstm_letter = lstm_idx_to_letter[lstm_class]
                 
-                # Si LSTM tiene alta confianza, usar esa prediccion
-                if lstm_conf > 60:  # Umbral mas permisivo
+                 # OPTIMIZACIÓN 4: Cooldown adaptativo basado en confianza
+                if lstm_conf > 80:  # Muy alta confianza
                     current_letter = lstm_letter
                     current_confidence = lstm_conf
                     is_dynamic = True
-                    lstm_prediction_cooldown = 5  # Cooldown mas corto (solo 5 frames)
-                    # NO limpiamos buffer para permitir deteccion continua
+                    lstm_prediction_cooldown = 4  # Reducido de 8 a 4 frames (~0.13s)
+                elif lstm_conf > 60:  # Confianza moderada
+                    current_letter = lstm_letter
+                    current_confidence = lstm_conf
+                    is_dynamic = True
+                    lstm_prediction_cooldown = 2  # Reducido de 3 a 2 frames (~0.06s)
+                # Si confianza < 60, no actualizar predicción
         
-        # Si no es dinamica, usar estatica
-        if not is_dynamic or lstm_prediction_cooldown <= 0:
+        # CORRECCIÓN CRÍTICA: Resetear a modo estático automáticamente
+        # Condiciones para volver a modo estático:
+        # 1. Cooldown expirado Y
+        # 2. (No hay movimiento O buffer vacío/incompleto)
+        if lstm_prediction_cooldown <= 0:
+            # Si el buffer no está lleno o no hay movimiento, volver a estático
+            if not has_movement:
+                is_dynamic = False
+        
+        # Actualizar predicción según el modo actual
+        # NUEVA LÓGICA: Si hay movimiento y aún no hay predicción LSTM, mostrar "detectando..."
+        if has_movement and not is_dynamic:
+            # Movimiento detectado pero aún no hay predicción LSTM válida
+            current_letter = "..."
+            current_confidence = 0
+        elif not is_dynamic:
+            # Sin movimiento: usar predicción estática
             current_letter = static_letter
             current_confidence = static_conf
-            is_dynamic = False
+        # Si is_dynamic = True, mantener la última predicción LSTM
         
-        lstm_prediction_cooldown -= 1
+        # Decrementar cooldown
+        if lstm_prediction_cooldown > 0:
+            lstm_prediction_cooldown -= 1
+        
+        # Incrementar contador de frames
+        frame_count += 1
     else:
-        # Sin mano, limpiar buffer
+        # Sin mano, limpiar buffer y cache
         frame_buffer.clear()
         current_letter = ""
         current_confidence = 0
         is_dynamic = False
+        frame_count = 0
+        last_static_letter = ""
+        last_static_conf = 0
     
     # ============================================================
     # UI
