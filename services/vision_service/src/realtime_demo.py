@@ -89,14 +89,32 @@ def draw_landmarks(image, hand_landmarks):
 
 
 def detect_movement(buffer):
-    """Detecta si hay movimiento significativo en el buffer."""
+    """
+    Detecta si hay movimiento significativo en el buffer.
+    Analiza los ÚLTIMOS frames para ser sensible al fin del movimiento.
+    """
     if len(buffer) < 10:
         return False
     
+    # Comparar primero vs último (movimiento total)
     first = np.array(buffer[0])
     last = np.array(buffer[-1])
-    movement = np.linalg.norm(last - first)
-    return movement > 0.15  # Umbral de movimiento
+    total_movement = np.linalg.norm(last - first)
+    
+    # NUEVO: Comparar los últimos 5 frames para detectar si el movimiento TERMINÓ
+    recent_frames = list(buffer)[-5:]
+    if len(recent_frames) >= 5:
+        recent_movement = 0
+        for i in range(len(recent_frames) - 1):
+            diff = np.linalg.norm(np.array(recent_frames[i+1]) - np.array(recent_frames[i]))
+            recent_movement += diff
+        recent_movement /= 4  # Promedio
+        
+        # Si el movimiento reciente es muy pequeño, considerarlo como "sin movimiento"
+        if recent_movement < 0.02:  # Umbral muy bajo para detectar mano quieta
+            return False
+    
+    return total_movement > 0.15  # Umbral de movimiento total
 
 
 print("\n" + "="*50)
@@ -187,27 +205,24 @@ while True:
                 lstm_conf = lstm_pred[0][lstm_class] * 100
                 lstm_letter = lstm_idx_to_letter[lstm_class]
                 
-                 # OPTIMIZACIÓN 4: Cooldown adaptativo basado en confianza
+                 # OPTIMIZACIÓN 4: Cooldown ULTRA-CORTO para transiciones rápidas
                 if lstm_conf > 80:  # Muy alta confianza
                     current_letter = lstm_letter
                     current_confidence = lstm_conf
                     is_dynamic = True
-                    lstm_prediction_cooldown = 4  # Reducido de 8 a 4 frames (~0.13s)
+                    lstm_prediction_cooldown = 2  # Solo 2 frames (~0.06s)
                 elif lstm_conf > 60:  # Confianza moderada
                     current_letter = lstm_letter
                     current_confidence = lstm_conf
                     is_dynamic = True
-                    lstm_prediction_cooldown = 2  # Reducido de 3 a 2 frames (~0.06s)
+                    lstm_prediction_cooldown = 1  # Solo 1 frame (~0.03s)
                 # Si confianza < 60, no actualizar predicción
         
-        # CORRECCIÓN CRÍTICA: Resetear a modo estático automáticamente
-        # Condiciones para volver a modo estático:
-        # 1. Cooldown expirado Y
-        # 2. (No hay movimiento O buffer vacío/incompleto)
-        if lstm_prediction_cooldown <= 0:
-            # Si el buffer no está lleno o no hay movimiento, volver a estático
-            if not has_movement:
-                is_dynamic = False
+        # CORRECCIÓN CRÍTICA: Reseteo INMEDIATO a modo estático
+        # Si NO hay movimiento, resetear inmediatamente (sin esperar cooldown)
+        if not has_movement:
+            is_dynamic = False
+            lstm_prediction_cooldown = 0  # Resetear cooldown también
         
         # Actualizar predicción según el modo actual
         # NUEVA LÓGICA: Si hay movimiento y aún no hay predicción LSTM, mostrar "detectando..."

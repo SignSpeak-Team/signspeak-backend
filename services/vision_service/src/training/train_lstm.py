@@ -8,6 +8,7 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.utils import plot_model
+from data_augmentation import apply_augmentation
 
 # Rutas
 BASE_PATH = Path(__file__).parent.parent.parent  # vision_service/
@@ -105,6 +106,20 @@ def main():
     if len(X) == 0:
         print("[ERROR] No se encontraron secuencias")
         return
+    
+    # NUEVO: Aplicar Data Augmentation
+    print(f"\n{'='*60}")
+    print("¿APLICAR DATA AUGMENTATION?")
+    print(f"{'='*60}")
+    print("Esto generará variaciones de tus datos existentes para mejorar el modelo.")
+    print("Incrementará el dataset aproximadamente 5x.\n")
+    
+    use_augmentation = input("¿Aplicar augmentation? (s/n): ").lower() == 's'
+    
+    if use_augmentation:
+        X, y = apply_augmentation(X, y, augmentations_per_sample=4)
+    else:
+        print("\n[INFO] Continuando sin data augmentation\n")
     
     # Dividir datos
     X_train, X_val, y_train, y_val = train_test_split(
