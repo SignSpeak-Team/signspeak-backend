@@ -6,52 +6,51 @@ from tensorflow import keras
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-
-# Rutas
-from pathlib import Path
-BASE_PATH = Path(__file__).parent.parent  # vision_service/
-DATA_PATH = BASE_PATH / "datasets" / "processed"
-MODEL_PATH = Path(__file__).parent / "hand_landmarker.task"
-
 import urllib.request
 import os
 
-if not os.path.exists(MODEL_PATH):
+# Importar configuración centralizada
+from config import (
+    SIGN_MODEL_PATH, LSTM_MODEL_PATH,
+    LABEL_ENCODER_PATH, LSTM_LABEL_ENCODER_PATH,
+    HAND_LANDMARKER_PATH,
+    SEQUENCE_LENGTH, NUM_FEATURES
+)
+
+# Descargar modelo MediaPipe si no existe
+if not os.path.exists(HAND_LANDMARKER_PATH):
     print("Descargando modelo de MediaPipe...")
     url = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
-    urllib.request.urlretrieve(url, MODEL_PATH)
+    urllib.request.urlretrieve(url, HAND_LANDMARKER_PATH)
     print("Modelo descargado")
 
+# Cargar modelos
 print("Cargando modelo estatico...")
-static_model = keras.models.load_model(f"{DATA_PATH}/sign_model.keras")
-with open(f"{DATA_PATH}/label_encoder.pkl", "rb") as f:
+static_model = keras.models.load_model(str(SIGN_MODEL_PATH))
+with open(LABEL_ENCODER_PATH, "rb") as f:
     static_labels = pickle.load(f)
 static_idx_to_letter = {v: k for k, v in static_labels.items()}
 print(f"  Letras estaticas: {list(static_labels.keys())}")
 
 # Modelo dinamico LSTM (6 letras)
 print("Cargando modelo LSTM...")
-lstm_model = keras.models.load_model(f"{DATA_PATH}/lstm_letters.keras")
-with open(f"{DATA_PATH}/lstm_label_encoder.pkl", "rb") as f:
+lstm_model = keras.models.load_model(str(LSTM_MODEL_PATH))
+with open(LSTM_LABEL_ENCODER_PATH, "rb") as f:
     lstm_labels = pickle.load(f)
 lstm_idx_to_letter = {v: k for k, v in lstm_labels.items()}
 DYNAMIC_LETTERS = set(lstm_labels.keys())
 print(f"  Letras dinamicas: {list(lstm_labels.keys())}")
 
 # Configurar MediaPipe Hand Landmarker
-base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
+base_options = python.BaseOptions(model_asset_path=str(HAND_LANDMARKER_PATH))
 options = vision.HandLandmarkerOptions(
     base_options=base_options,
     num_hands=1
 )
 detector = vision.HandLandmarker.create_from_options(options)
 
-# ============================================================
-# CONFIGURACION LSTM OPTIMIZADA
-# ============================================================
-SEQUENCE_LENGTH = 15  # Reducido de 30 a 15 para detección más rápida
-NUM_FEATURES = 63
-PREDICTION_INTERVAL = 3  # Predecir cada N frames en lugar de todos
+# Configuración desde config.py
+from config import PREDICTION_INTERVAL
 frame_buffer = deque(maxlen=SEQUENCE_LENGTH)
 
 # Colores
