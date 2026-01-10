@@ -34,8 +34,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY models/ /app/models/
 COPY src/ /app/src/
 
-# Exponer puerto (si usarás como API)
+# Exponer puerto API
 EXPOSE 8000
 
-# Comando por defecto: ejecutar demo
-CMD ["python", "src/realtime_demo.py"]
+# Comando por defecto: ejecutar API REST
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

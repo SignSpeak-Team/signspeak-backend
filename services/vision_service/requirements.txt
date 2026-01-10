@@ -13,3 +13,9 @@ joblib>=1.4.0
 
 # Compatibilidad
 protobuf>=5.0.0
+
+# API REST
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.6
+python-multipart==0.0.20
