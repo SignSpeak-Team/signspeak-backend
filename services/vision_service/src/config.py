@@ -11,10 +11,19 @@ MODELS_DIR = BASE_DIR / "models"
 SRC_DIR = BASE_DIR / "src"
 
 # Model paths
+# Static sign model (21 letters)
 SIGN_MODEL_PATH = MODELS_DIR / "sign_model.keras"
-LSTM_MODEL_PATH = MODELS_DIR / "lstm_letters.keras"
 LABEL_ENCODER_PATH = MODELS_DIR / "label_encoder.pkl"
+
+# LSTM model (dynamic letters: J, K, Q, X, Z, Ñ)
+LSTM_MODEL_PATH = MODELS_DIR / "lstm_letters.keras"
 LSTM_LABEL_ENCODER_PATH = MODELS_DIR / "lstm_label_encoder.pkl"
+
+# LSTM model (249 words)
+WORDS_MODEL_PATH = MODELS_DIR / "words_model.keras"
+WORDS_LABEL_ENCODER_PATH = MODELS_DIR / "words_label_encoder.pkl"
+
+# MediaPipe hand landmarker
 HAND_LANDMARKER_PATH = MODELS_DIR / "hand_landmarker.task"
 
 # Model configuration

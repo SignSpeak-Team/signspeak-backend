@@ -51,7 +51,7 @@
 - [x] Procesar videos → extraer secuencias de landmarks (1876 secuencias)
 - [x] Entrenar modelo LSTM para palabras (91.24% accuracy con data augmentation)
 - [x] Validar accuracy del modelo
-- [ ] Integrar nuevo modelo en API
+- [/] Integrar nuevo modelo en API (feature/words-api-integration)
 
 ### Fase 2.6: Servicio de Frases (Claude API + TTS)
 
