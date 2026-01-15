@@ -1,0 +1,9 @@
+# Ignorar todo por defecto
+*
+
+# Permitir solo lo necesario
+!requirements.txt
+!models/
+!models/**
+!src/
+!src/**

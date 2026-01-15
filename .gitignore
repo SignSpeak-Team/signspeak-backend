@@ -19,26 +19,33 @@ venv/
 .env.local
 
 # ==================================
-# DATASETS (descargar de Zenodo)
+# DATASETS Y DESARROLLO  
 # ==================================
-services/vision_service/datasets/lsm_zenodo/
-services/vision_service/datasets/videos/
-services/vision_service/datasets/sequences/
-services/vision_service/datasets/processed/
-!services/vision_service/datasets/processed/letras_estaticas_training.png
-!services/vision_service/datasets/processed/lstm_training_history.png
+# Datasets en dev/ (no para producción)
+services/vision_service/dev/datasets_raw/
+services/vision_service/dev/datasets_processed/
+services/vision_service/dev/reports/
+services/vision_service/dev/metadata/
+
+# Modelos en /models (opcional: usar Git LFS para subir modelos grandes)
+# Descomentar si quieres ignorar modelos (deben descargarse por separado)
+# services/vision_service/models/*.keras
+# services/vision_service/models/*.pkl
 
 # ==================================
 # ARCHIVOS GENERADOS (se regeneran)
 # ==================================
+# Checkpoints temporales
+*_best.keras
+*.checkpoint
+
 # Datos procesados
 datasets/processed/*.npz
 *.npz
 
-# Modelos entrenados
-*.keras
-*.h5
-*.task
+# Architecture diagrams (generados por scripts)
+*.png
+!*training*.png
 
 # ==================================
 # SISTEMA
