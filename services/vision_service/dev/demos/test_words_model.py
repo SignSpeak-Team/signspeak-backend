@@ -1,5 +1,11 @@
 """Quick test to verify all models load correctly"""
-from services.vision_service.src.core.predictor import get_predictor
+import sys
+from pathlib import Path
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+
+from core.predictor import get_predictor
 
 print("Loading predictor...")
 p = get_predictor()

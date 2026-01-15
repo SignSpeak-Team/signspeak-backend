@@ -8,11 +8,35 @@ services:
       - "8000:8000"
     depends_on:
       - translation-service
+      - vision-service
     environment:
       TRANSLATION_SERVICE_URL: http://translation-service:8001
+      VISION_SERVICE_URL: http://vision-service:8002
 
   translation-service:
     build: ./services/translation_service
     container_name: translation-service
     ports:
       - "8001:8001"
+    depends_on:
+      - vision-service
+    environment:
+      VISION_SERVICE_URL: http://vision-service:8002
+
+  vision-service:
+    build: ./services/vision_service
+    container_name: vision-service
+    ports:
+      - "8002:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
