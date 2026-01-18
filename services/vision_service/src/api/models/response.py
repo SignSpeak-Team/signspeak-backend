@@ -90,3 +90,48 @@ class ErrorResponse(BaseModel):
                 "error_code": "INVALID_INPUT"
             }
         }
+
+
+class WordPredictionResponse(BaseModel):
+    """Response para predicción de palabras con buffer"""
+    
+    word: str = Field(..., description="Palabra predicha")
+    confidence: float = Field(..., description="Confianza de la predicción (0-100)")
+    phrase: str = Field(..., description="Frase acumulada en el buffer")
+    accepted: bool = Field(..., description="Si la palabra fue aceptada por el buffer")
+    processing_time_ms: float = Field(..., description="Tiempo de procesamiento en ms")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "word": "hola",
+                "confidence": 92.5,
+                "phrase": "buenos días hola",
+                "accepted": True,
+                "processing_time_ms": 45.2
+            }
+        }
+
+
+class BufferStatsResponse(BaseModel):
+    """Response con estadísticas del buffer de palabras"""
+    
+    total_received: int = Field(..., description="Total de detecciones recibidas")
+    total_accepted: int = Field(..., description="Total de detecciones aceptadas")
+    rejected_by_cooldown: int = Field(..., description="Rechazadas por cooldown")
+    rejected_by_confidence: int = Field(..., description="Rechazadas por baja confianza")
+    acceptance_rate: float = Field(..., description="Tasa de aceptación (%)")
+    current_phrase: str = Field(..., description="Frase actual en el buffer")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_received": 50,
+                "total_accepted": 12,
+                "rejected_by_cooldown": 30,
+                "rejected_by_confidence": 8,
+                "acceptance_rate": 24.0,
+                "current_phrase": "hola buenos días"
+            }
+        }
+
