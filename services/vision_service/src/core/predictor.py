@@ -1,241 +1,219 @@
-import numpy as np
+"""Sign Language Predictor - Handles all model predictions."""
+
+import time
 import pickle
-from tensorflow import keras
+import numpy as np
 from collections import deque
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Any
+
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import InputLayer, BatchNormalization, LSTM, Dropout, Dense
+
 from config import (
-    SIGN_MODEL_PATH, LSTM_MODEL_PATH,
-    LABEL_ENCODER_PATH, LSTM_LABEL_ENCODER_PATH,
+    SIGN_MODEL_PATH, LABEL_ENCODER_PATH,
+    LSTM_MODEL_PATH, LSTM_LABEL_ENCODER_PATH,
     WORDS_MODEL_PATH, WORDS_LABEL_ENCODER_PATH,
-    SEQUENCE_LENGTH, HIGH_CONFIDENCE_THRESHOLD,
-    MEDIUM_CONFIDENCE_THRESHOLD
+    HOLISTIC_MODEL_PATH, HOLISTIC_LABEL_ENCODER_PATH,
+    SEQUENCE_LENGTH, HOLISTIC_SEQUENCE_LENGTH, HOLISTIC_NUM_FEATURES,
 )
 from core.word_buffer import WordBuffer
 
 
 class SignPredictor:
-    """Predictor de lenguaje de señas (estático y dinámico)"""
-    
+    """Unified predictor for LSM sign language recognition."""
+
     def __init__(self):
-        """Inicializa modelos y configuración"""
-        print("[Predictor] Cargando modelos...")
-        
-        # Cargar modelo estático
+        print("[Predictor] Loading models...")
+        self._load_static_model()
+        self._load_dynamic_model()
+        self._load_words_model()
+        self._load_holistic_model()
+        self._init_buffers()
+        print("[Predictor] All models loaded successfully")
+
+    # === Model Loaders ===
+
+    def _load_static_model(self):
+        """Load static alphabet model (21 letters)."""
         self.static_model = keras.models.load_model(str(SIGN_MODEL_PATH))
-        with open(LABEL_ENCODER_PATH, "rb") as f:
-            static_labels = pickle.load(f)
-        self.static_idx_to_letter = {v: k for k, v in static_labels.items()}
-        
-        # Cargar modelo dinámico LSTM (letras)
+        self.static_labels = self._load_encoder(LABEL_ENCODER_PATH)
+        print(f"  ✓ Static: {len(self.static_labels)} letters")
+
+    def _load_dynamic_model(self):
+        """Load dynamic LSTM model (J, K, Q, X, Z, Ñ)."""
         self.lstm_model = keras.models.load_model(str(LSTM_MODEL_PATH))
-        with open(LSTM_LABEL_ENCODER_PATH, "rb") as f:
-            lstm_labels = pickle.load(f)
-        self.lstm_idx_to_letter = {v: k for k, v in lstm_labels.items()}
-        
-        # Cargar modelo LSTM (249 palabras)
+        self.lstm_labels = self._load_encoder(LSTM_LABEL_ENCODER_PATH)
+        print(f"  ✓ Dynamic: {len(self.lstm_labels)} letters")
+
+    def _load_words_model(self):
+        """Load words model (249 vocabulary)."""
         self.words_model = keras.models.load_model(str(WORDS_MODEL_PATH))
-        with open(WORDS_LABEL_ENCODER_PATH, "rb") as f:
-            words_labels = pickle.load(f)
-        self.words_idx_to_word = {v: k for k, v in words_labels.items()}
-        
-        # Buffers para secuencias
-        self.frame_buffer = deque(maxlen=SEQUENCE_LENGTH)  # Para letras dinámicas
-        self.words_buffer = deque(maxlen=SEQUENCE_LENGTH)  # Para palabras
-        
-        # Word buffer para filtrar repeticiones
+        self.words_labels = self._load_encoder(WORDS_LABEL_ENCODER_PATH)
+        print(f"  ✓ Words: {len(self.words_labels)} words")
+
+    def _load_holistic_model(self):
+        """Load holistic medical model (150 words) - requires architecture recreation."""
+        self.holistic_model = Sequential([
+            InputLayer(input_shape=(HOLISTIC_SEQUENCE_LENGTH, HOLISTIC_NUM_FEATURES)),
+            BatchNormalization(),
+            LSTM(64, return_sequences=True),
+            Dropout(0.2),
+            LSTM(128, return_sequences=False),
+            Dropout(0.2),
+            Dense(64, activation='relu'),
+            Dropout(0.2),
+            Dense(32, activation='relu'),
+            Dense(150, activation='softmax')
+        ])
+        self.holistic_model.load_weights(str(HOLISTIC_MODEL_PATH))
+        self.holistic_labels = self._load_encoder(HOLISTIC_LABEL_ENCODER_PATH)
+        print(f"  ✓ Holistic: {len(self.holistic_labels)} medical words")
+
+    def _load_encoder(self, path) -> Dict[int, str]:
+        """Load label encoder and invert it (idx -> label)."""
+        with open(path, "rb") as f:
+            labels = pickle.load(f)
+        return {v: k for k, v in labels.items()}
+
+    def _init_buffers(self):
+        """Initialize frame buffers for sequence models."""
+        self.frame_buffer = deque(maxlen=SEQUENCE_LENGTH)
+        self.words_buffer = deque(maxlen=SEQUENCE_LENGTH)
+        self.holistic_buffer = deque(maxlen=HOLISTIC_SEQUENCE_LENGTH)
         self.word_buffer = WordBuffer()
+
+    # === Predictions ===
+
+    def predict_static(self, landmarks: np.ndarray) -> Dict[str, Any]:
+        """Predict static letter from hand landmarks (63 features)."""
+        self._validate_shape(landmarks, (63,))
         
-        print(f"[Predictor] ✓ Modelo estático cargado: {len(self.static_idx_to_letter)} letras")
-        print(f"[Predictor] ✓ Modelo LSTM letras cargado: {len(self.lstm_idx_to_letter)} letras")
-        print(f"[Predictor] ✓ Modelo LSTM palabras cargado: {len(self.words_idx_to_word)} palabras")
-        print(f"[Predictor] ✓ WordBuffer inicializado")
-    
-    def predict_static(self, landmarks: np.ndarray) -> Dict[str, any]:
-        """
-        Predice una letra estática desde landmarks de mano.
-        
-        Args:
-            landmarks: Array numpy de shape (63,) con coordenadas landmarks
-        
-        Returns:
-            dict con 'letter', 'confidence', 'type'
-        """
-        import time
-        start_time = time.time()
-        
-        # Validar input
-        if landmarks.shape != (63,):
-            raise ValueError(f"Expected shape (63,), got {landmarks.shape}")
-        
-        # Predicción
-        landmarks_reshaped = np.array([landmarks])
-        prediction = self.static_model.predict(landmarks_reshaped, verbose=0)
-        
-        class_idx = np.argmax(prediction)
-        confidence = float(prediction[0][class_idx] * 100)
-        letter = self.static_idx_to_letter[class_idx]
-        
-        processing_time = (time.time() - start_time) * 1000  # ms
+        start = time.time()
+        pred = self.static_model.predict(landmarks.reshape(1, -1), verbose=0)
+        idx, conf = self._get_prediction(pred)
         
         return {
-            "letter": letter,
-            "confidence": round(confidence, 2),
+            "letter": self.static_labels[idx],
+            "confidence": round(conf, 2),
             "type": "static",
-            "processing_time_ms": round(processing_time, 2)
+            "processing_time_ms": round((time.time() - start) * 1000, 2)
         }
-    
-    def predict_dynamic(self, sequence: np.ndarray) -> Dict[str, any]:
-        import time
-        start_time = time.time()
+
+    def predict_dynamic(self, sequence: np.ndarray) -> Dict[str, Any]:
+        """Predict dynamic letter from sequence (15 frames x 63 features)."""
+        self._validate_shape(sequence, (SEQUENCE_LENGTH, 63))
         
-        # Validar input
-        if sequence.shape != (SEQUENCE_LENGTH, 63):
-            raise ValueError(f"Expected shape ({SEQUENCE_LENGTH}, 63), got {sequence.shape}")
-        
-        # Predicción
-        sequence_reshaped = np.array([sequence])
-        prediction = self.lstm_model.predict(sequence_reshaped, verbose=0)
-        
-        class_idx = np.argmax(prediction)
-        confidence = float(prediction[0][class_idx] * 100)
-        letter = self.lstm_idx_to_letter[class_idx]
-        
-        elapsed_time = time.time() - start_time
+        start = time.time()
+        pred = self.lstm_model.predict(sequence.reshape(1, SEQUENCE_LENGTH, 63), verbose=0)
+        idx, conf = self._get_prediction(pred)
         
         return {
-            "letter": letter,
-            "confidence": confidence,
+            "letter": self.lstm_labels[idx],
+            "confidence": round(conf, 2),
             "type": "dynamic",
-            "time": elapsed_time * 1000
+            "processing_time_ms": round((time.time() - start) * 1000, 2)
         }
-    
-    def predict_word(self, landmarks: np.ndarray) -> Dict[str, any]:
-        """
-        Predice una palabra desde una secuencia de landmarks.
-        
-        Args:
-            landmarks: Array numpy de shape (63,) con coordenadas landmarks del frame actual
-        
-        Returns:
-            dict con 'word', 'confidence', 'type' o None si no hay suficientes frames
-        """
-        import time
-        start_time = time.time()
-        
-        # Validar input
-        if landmarks.shape != (63,):
-            raise ValueError(f"Expected shape (63,), got {landmarks.shape}")
-        
-        # Añadir frame al buffer
+
+    def predict_word(self, landmarks: np.ndarray) -> Optional[Dict[str, Any]]:
+        """Predict word from accumulated frames (15 frames x 63 features)."""
+        self._validate_shape(landmarks, (63,))
         self.words_buffer.append(landmarks)
         
-        # Necesitamos SEQUENCE_LENGTH frames
         if len(self.words_buffer) < SEQUENCE_LENGTH:
             return None
         
-        # Crear secuencia
-        sequence = np.array(list(self.words_buffer))  # Shape: (SEQUENCE_LENGTH, 63)
-        sequence_reshaped = np.array([sequence])  # Shape: (1, SEQUENCE_LENGTH, 63)
-        
-        # Predicción
-        prediction = self.words_model.predict(sequence_reshaped, verbose=0)
-        
-        class_idx = np.argmax(prediction)
-        confidence = float(prediction[0][class_idx] * 100)
-        word = self.words_idx_to_word.get(class_idx, "UNKNOWN")
-        
-        elapsed_time = time.time() - start_time
+        start = time.time()
+        sequence = np.array(list(self.words_buffer))
+        pred = self.words_model.predict(sequence.reshape(1, SEQUENCE_LENGTH, 63), verbose=0)
+        idx, conf = self._get_prediction(pred)
         
         return {
-            "word": word,
-            "confidence": confidence,
+            "word": self.words_labels.get(idx, "UNKNOWN"),
+            "confidence": round(conf, 2),
             "type": "word",
-            "time": elapsed_time * 1000,
-            "buffer_size": len(self.words_buffer)
+            "processing_time_ms": round((time.time() - start) * 1000, 2)
         }
-    
-    def predict_word_with_buffer(self, landmarks: np.ndarray) -> Optional[Dict[str, any]]:
-        """
-        Predice palabra y aplica filtro de buffer para evitar repeticiones.
+
+    def predict_holistic(self, landmarks: np.ndarray) -> Optional[Dict[str, Any]]:
+        """Predict medical word from holistic landmarks (30 frames x 226 features)."""
+        self._validate_shape(landmarks, (HOLISTIC_NUM_FEATURES,))
+        self.holistic_buffer.append(landmarks)
         
-        Args:
-            landmarks: Array numpy de shape (63,) con coordenadas landmarks
+        if len(self.holistic_buffer) < HOLISTIC_SEQUENCE_LENGTH:
+            return None
         
-        Returns:
-            dict con predicción si fue aceptada por el buffer, None si fue filtrada
-        """
+        start = time.time()
+        sequence = np.array(list(self.holistic_buffer))
+        pred = self.holistic_model.predict(
+            sequence.reshape(1, HOLISTIC_SEQUENCE_LENGTH, HOLISTIC_NUM_FEATURES), 
+            verbose=0
+        )
+        idx, conf = self._get_prediction(pred)
+        
+        return {
+            "word": self.holistic_labels.get(idx, "UNKNOWN"),
+            "confidence": round(conf, 2),
+            "type": "holistic_medical",
+            "processing_time_ms": round((time.time() - start) * 1000, 2)
+        }
+
+    def predict_word_with_buffer(self, landmarks: np.ndarray) -> Optional[Dict[str, Any]]:
+        """Predict word with repetition filtering."""
         result = self.predict_word(landmarks)
-        
         if result is None:
             return None
         
-        # Aplicar filtro del buffer
-        was_accepted = self.word_buffer.add_detection(
-            word=result["word"],
-            confidence=result["confidence"]
-        )
-        
-        if was_accepted:
+        if self.word_buffer.add_detection(result["word"], result["confidence"]):
             result["phrase"] = self.word_buffer.get_phrase()
             result["accepted"] = True
             return result
-        
         return None
-    
+
+    # === Utilities ===
+
+    def _validate_shape(self, arr: np.ndarray, expected: tuple):
+        if arr.shape != expected:
+            raise ValueError(f"Expected {expected}, got {arr.shape}")
+
+    def _get_prediction(self, pred: np.ndarray) -> tuple[int, float]:
+        idx = int(np.argmax(pred))
+        conf = float(pred[0][idx] * 100)
+        return idx, conf
+
     def get_current_phrase(self) -> str:
-        """Retorna la frase acumulada en el word buffer."""
         return self.word_buffer.get_phrase()
-    
+
     def get_word_buffer_stats(self) -> Dict:
-        """Retorna estadísticas del word buffer."""
         return self.word_buffer.get_statistics()
-    
+
     def reset_buffer(self, buffer_type: str = "all"):
-        """
-        Reinicia los buffers de secuencias.
-        
-        Args:
-            buffer_type: "letters", "words", "word_buffer", o "all"
-        """
-        if buffer_type in ["letters", "all"]:
-            self.frame_buffer.clear()
-        if buffer_type in ["words", "all"]:
-            self.words_buffer.clear()
-        if buffer_type in ["word_buffer", "all"]:
-            self.word_buffer.clear()
-    
-    def get_models_info(self) -> Dict[str, any]:
+        """Reset specified buffer(s)."""
+        buffers = {
+            "letters": [self.frame_buffer],
+            "words": [self.words_buffer],
+            "holistic": [self.holistic_buffer],
+            "word_buffer": [self.word_buffer],
+            "all": [self.frame_buffer, self.words_buffer, self.holistic_buffer, self.word_buffer]
+        }
+        for buf in buffers.get(buffer_type, []):
+            buf.clear()
+
+    def get_models_info(self) -> Dict[str, Any]:
         return {
-            "static_model": {
-                "letters": list(self.static_idx_to_letter.values()),
-                "count": len(self.static_idx_to_letter),
-                "accuracy": 95.2,  # Aproximado
-                "version": "2.0"
-            },
-            "dynamic_model": {
-                "letters": list(self.lstm_idx_to_letter.values()),
-                "count": len(self.lstm_idx_to_letter),
-                "accuracy": 99.79,
-                "version": "2.0"
-            },
-            "words_model": {
-                "vocabulary_size": len(self.words_idx_to_word),
-                "accuracy": 91.24,
-                "version": "1.0",
-                "categories": "Saludos, Tiempo, Escuela, Familia, Hogar, Personas, Cocina, Ropa, Partes del Cuerpo, Vehículos, Lugares, Pronombres, Verbos, Profesiones, Estados de México"
-            }
+            "static": {"count": len(self.static_labels), "type": "alphabet"},
+            "dynamic": {"count": len(self.lstm_labels), "type": "alphabet"},
+            "words": {"count": len(self.words_labels), "type": "vocabulary"},
+            "holistic": {"count": len(self.holistic_labels), "type": "medical"}
         }
 
 
-# Instancia global del predictor (se carga una vez al iniciar la API)
-_predictor_instance: Optional[SignPredictor] = None
+# === Singleton ===
+_predictor: Optional[SignPredictor] = None
 
 
 def get_predictor() -> SignPredictor:
-
-    global _predictor_instance
-    
-    if _predictor_instance is None:
-        _predictor_instance = SignPredictor()
-    
-    return _predictor_instance
+    global _predictor
+    if _predictor is None:
+        _predictor = SignPredictor()
+    return _predictor

@@ -1,68 +1,50 @@
-"""Modelos Pydantic para las requests de la API"""
+"""API Request Models."""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List
 
 
 class LandmarksRequest(BaseModel):
-    """Request para predicción estática con landmarks"""
+    """Static prediction: 21 hand landmarks (63 features)."""
     
     landmarks: List[List[float]] = Field(
-        ...,
-        description="21 hand landmarks, cada uno con [x, y, z] coordenadas",
-        min_length=21,
-        max_length=21
+        ..., min_length=21, max_length=21,
+        description="21 landmarks [x,y,z] each"
     )
     
-    @validator('landmarks')
-    def validate_landmarks_format(cls, v):
-        """Validar que cada landmark tenga 3 coordenadas"""
-        for i, landmark in enumerate(v):
-            if len(landmark) != 3:
-                raise ValueError(f"Landmark {i} debe tener 3 coordenadas [x, y, z], tiene {len(landmark)}")
+    @field_validator('landmarks')
+    @classmethod
+    def validate_coords(cls, v):
+        for i, lm in enumerate(v):
+            if len(lm) != 3:
+                raise ValueError(f"Landmark {i}: expected 3 coords, got {len(lm)}")
         return v
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "landmarks": [
-                    [0.5, 0.3, 0.1],
-                    [0.52, 0.31, 0.11],
-                    # ... (21 total)
-                ]
-            }
-        }
 
 
 class SequenceRequest(BaseModel):
-    """Request para predicción dinámica con secuencia de frames"""
+    """Dynamic/Words prediction: 15 frames x 21 landmarks."""
     
     sequence: List[List[List[float]]] = Field(
-        ...,
-        description="Secuencia de 15 frames, cada frame con 21 landmarks de 3 coordenadas",
-        min_length=15,
-        max_length=15
+        ..., min_length=15, max_length=15,
+        description="15 frames, each with 21 landmarks"
     )
     
-    @validator('sequence')
-    def validate_sequence_format(cls, v):
-        """Validar formato de la secuencia"""
-        for frame_idx, frame in enumerate(v):
+    @field_validator('sequence')
+    @classmethod
+    def validate_sequence(cls, v):
+        for f_idx, frame in enumerate(v):
             if len(frame) != 21:
-                raise ValueError(f"Frame {frame_idx} debe tener 21 landmarks, tiene {len(frame)}")
-            for landmark_idx, landmark in enumerate(frame):
-                if len(landmark) != 3:
-                    raise ValueError(
-                        f"Frame {frame_idx}, landmark {landmark_idx} debe tener 3 coords, tiene {len(landmark)}"
-                    )
+                raise ValueError(f"Frame {f_idx}: expected 21 landmarks, got {len(frame)}")
+            for l_idx, lm in enumerate(frame):
+                if len(lm) != 3:
+                    raise ValueError(f"Frame {f_idx}, landmark {l_idx}: expected 3 coords")
         return v
+
+
+class HolisticRequest(BaseModel):
+    """Holistic prediction: 226 features (pose + hands)."""
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "sequence": [
-                    [[0.5, 0.3, 0.1], [0.52, 0.31, 0.11]],  # Frame 1 (simplificado)
-                    # ... (15 frames total)
-                ]
-            }
-        }
+    landmarks: List[float] = Field(
+        ..., min_length=226, max_length=226,
+        description="226 holistic features"
+    )
