@@ -10,6 +10,7 @@ from config import (
     SEQUENCE_LENGTH, HIGH_CONFIDENCE_THRESHOLD,
     MEDIUM_CONFIDENCE_THRESHOLD
 )
+from core.word_buffer import WordBuffer
 
 
 class SignPredictor:
@@ -41,9 +42,13 @@ class SignPredictor:
         self.frame_buffer = deque(maxlen=SEQUENCE_LENGTH)  # Para letras dinámicas
         self.words_buffer = deque(maxlen=SEQUENCE_LENGTH)  # Para palabras
         
+        # Word buffer para filtrar repeticiones
+        self.word_buffer = WordBuffer()
+        
         print(f"[Predictor] ✓ Modelo estático cargado: {len(self.static_idx_to_letter)} letras")
         print(f"[Predictor] ✓ Modelo LSTM letras cargado: {len(self.lstm_idx_to_letter)} letras")
         print(f"[Predictor] ✓ Modelo LSTM palabras cargado: {len(self.words_idx_to_word)} palabras")
+        print(f"[Predictor] ✓ WordBuffer inicializado")
     
     def predict_static(self, landmarks: np.ndarray) -> Dict[str, any]:
         """
@@ -149,17 +154,55 @@ class SignPredictor:
             "buffer_size": len(self.words_buffer)
         }
     
+    def predict_word_with_buffer(self, landmarks: np.ndarray) -> Optional[Dict[str, any]]:
+        """
+        Predice palabra y aplica filtro de buffer para evitar repeticiones.
+        
+        Args:
+            landmarks: Array numpy de shape (63,) con coordenadas landmarks
+        
+        Returns:
+            dict con predicción si fue aceptada por el buffer, None si fue filtrada
+        """
+        result = self.predict_word(landmarks)
+        
+        if result is None:
+            return None
+        
+        # Aplicar filtro del buffer
+        was_accepted = self.word_buffer.add_detection(
+            word=result["word"],
+            confidence=result["confidence"]
+        )
+        
+        if was_accepted:
+            result["phrase"] = self.word_buffer.get_phrase()
+            result["accepted"] = True
+            return result
+        
+        return None
+    
+    def get_current_phrase(self) -> str:
+        """Retorna la frase acumulada en el word buffer."""
+        return self.word_buffer.get_phrase()
+    
+    def get_word_buffer_stats(self) -> Dict:
+        """Retorna estadísticas del word buffer."""
+        return self.word_buffer.get_statistics()
+    
     def reset_buffer(self, buffer_type: str = "all"):
         """
         Reinicia los buffers de secuencias.
         
         Args:
-            buffer_type: "letters", "words", o "all"
+            buffer_type: "letters", "words", "word_buffer", o "all"
         """
         if buffer_type in ["letters", "all"]:
             self.frame_buffer.clear()
         if buffer_type in ["words", "all"]:
             self.words_buffer.clear()
+        if buffer_type in ["word_buffer", "all"]:
+            self.word_buffer.clear()
     
     def get_models_info(self) -> Dict[str, any]:
         return {
