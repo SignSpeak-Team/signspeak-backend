@@ -51,9 +51,18 @@
 - [x] Procesar videos → extraer secuencias de landmarks (1876 secuencias)
 - [x] Entrenar modelo LSTM para palabras (91.24% accuracy con data augmentation)
 - [x] Validar accuracy del modelo
-- [/] Integrar nuevo modelo en API (feature/words-api-integration)
+- [x] Integrar nuevo modelo en API ✅ Mergeado a main
+- [ ] Implementar Buffer Inteligente de Palabras → PRÓXIMO 📋
 
-### Fase 2.6: Servicio de Frases (Claude API + TTS)
+### Fase 2.6: Buffer Inteligente + Endpoint API
+
+- [ ] Crear `word_buffer.py` (filtrado de repeticiones)
+- [ ] Integrar buffer en `predictor.py`
+- [ ] Tests del buffer
+- [ ] Endpoint API `/predict/words` (usa buffer)
+- [ ] Demo actualizado
+
+### Fase 2.7: Servicio de Frases (Claude API + TTS)
 
 - [ ] Crear `phrase_service/` microservicio
 - [ ] Integrar Claude API (Haiku) para conjugación LSM→Español
