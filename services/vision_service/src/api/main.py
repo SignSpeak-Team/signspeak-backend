@@ -1,8 +1,3 @@
-"""
-FastAPI Application - SignSpeak Vision Service
-API REST para reconocimiento de lenguaje de señas LSM
-"""
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import health, prediction
