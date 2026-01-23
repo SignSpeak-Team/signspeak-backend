@@ -36,37 +36,50 @@ class SignPredictor:
 
     def _load_static_model(self):
         """Load static alphabet model (21 letters)."""
-        self.static_model = keras.models.load_model(str(SIGN_MODEL_PATH))
+        self.static_model = keras.models.load_model(
+            str(SIGN_MODEL_PATH), compile=False, safe_mode=False
+        )
         self.static_labels = self._load_encoder(LABEL_ENCODER_PATH)
         print(f"  ✓ Static: {len(self.static_labels)} letters")
 
     def _load_dynamic_model(self):
         """Load dynamic LSTM model (J, K, Q, X, Z, Ñ)."""
-        self.lstm_model = keras.models.load_model(str(LSTM_MODEL_PATH))
+        self.lstm_model = keras.models.load_model(
+            str(LSTM_MODEL_PATH), compile=False, safe_mode=False
+        )
         self.lstm_labels = self._load_encoder(LSTM_LABEL_ENCODER_PATH)
         print(f"  ✓ Dynamic: {len(self.lstm_labels)} letters")
 
     def _load_words_model(self):
         """Load words model (249 vocabulary)."""
-        self.words_model = keras.models.load_model(str(WORDS_MODEL_PATH))
+        self.words_model = keras.models.load_model(
+            str(WORDS_MODEL_PATH), compile=False, safe_mode=False
+        )
         self.words_labels = self._load_encoder(WORDS_LABEL_ENCODER_PATH)
         print(f"  ✓ Words: {len(self.words_labels)} words")
 
     def _load_holistic_model(self):
-        """Load holistic medical model (150 words) - requires architecture recreation."""
-        self.holistic_model = Sequential([
-            InputLayer(input_shape=(HOLISTIC_SEQUENCE_LENGTH, HOLISTIC_NUM_FEATURES)),
-            BatchNormalization(),
-            LSTM(64, return_sequences=True),
-            Dropout(0.2),
-            LSTM(128, return_sequences=False),
-            Dropout(0.2),
-            Dense(64, activation='relu'),
-            Dropout(0.2),
-            Dense(32, activation='relu'),
-            Dense(150, activation='softmax')
-        ])
-        self.holistic_model.load_weights(str(HOLISTIC_MODEL_PATH))
+        """Load holistic medical model (150 words)."""
+        try:
+            # Try loading as full model first (standard for .h5)
+            self.holistic_model = keras.models.load_model(str(HOLISTIC_MODEL_PATH))
+        except Exception:
+            # Fallback: Re-create architecture if file only contains weights
+            print("  ! Holistic: Full load failed, rebuilding architecture...")
+            self.holistic_model = Sequential([
+                InputLayer(input_shape=(HOLISTIC_SEQUENCE_LENGTH, HOLISTIC_NUM_FEATURES)),
+                BatchNormalization(),
+                LSTM(64, return_sequences=True),
+                Dropout(0.2),
+                LSTM(128, return_sequences=False),
+                Dropout(0.2),
+                Dense(64, activation='relu'),
+                Dropout(0.2),
+                Dense(32, activation='relu'),
+                Dense(150, activation='softmax')
+            ])
+            self.holistic_model.load_weights(str(HOLISTIC_MODEL_PATH))
+
         self.holistic_labels = self._load_encoder(HOLISTIC_LABEL_ENCODER_PATH)
         print(f"  ✓ Holistic: {len(self.holistic_labels)} medical words")
 

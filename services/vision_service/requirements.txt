@@ -1,21 +1,24 @@
 # Vision Service - SignSpeak
-# Python 3.11 requerido
+# Python 3.11+ required
+# Install from root: pip install -r ../../../requirements.txt
 
-# Core
-opencv-python>=4.8.0
-numpy>=2.0.0
-mediapipe>=0.10.30
+# Vision-specific dependencies
+opencv-contrib-python==4.11.0.86
+mediapipe==0.10.9
 
-# ML
-tensorflow>=2.15.0
-scikit-learn>=1.5.0
-joblib>=1.4.0
+# ML Core
+tensorflow==2.15.0
+keras==3.13.0
+numpy==1.24.3
+scikit-learn==1.8.0
 
-# Compatibilidad
-protobuf>=5.0.0
+# API
+fastapi==0.128.0
+uvicorn==0.40.0
+pydantic==2.12.5
+python-multipart==0.0.21
 
-# API REST
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-pydantic==2.10.6
-python-multipart==0.0.20
+# Utils
+joblib==1.5.3
+protobuf==3.20.3
+sounddevice==0.5.5
