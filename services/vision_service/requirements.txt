@@ -7,7 +7,8 @@ opencv-contrib-python==4.11.0.86
 mediapipe==0.10.9
 
 # ML Core
-tensorflow==2.15.0
+# TensorFlow 2.16+ natively supports Keras 3.x
+tensorflow==2.16.2
 keras==3.13.0
 numpy==1.24.3
 scikit-learn==1.8.0
