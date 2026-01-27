@@ -1,6 +1,7 @@
 import httpx
 from src.settings import settings
 
+
 async def translate(payload: dict) -> dict:
     url = f"{settings.TRANSLATION_SERVICE_URL}/api/v1/translate/"
 

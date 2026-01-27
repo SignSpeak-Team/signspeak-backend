@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from typing import List
 
 
 class Settings(BaseSettings):
@@ -13,7 +12,7 @@ class Settings(BaseSettings):
     API_GATEWAY_PORT: int = 8000
 
     # CORS
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: list[str] = ["*"]
 
     # Downstream services (Docker DNS)
     TRANSLATION_SERVICE_URL: str = "http://translation-service:8001"

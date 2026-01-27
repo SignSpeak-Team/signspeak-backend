@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from api.routes import health, prediction
 
 # Crear aplicación FastAPI
@@ -8,7 +9,7 @@ app = FastAPI(
     description="API REST para reconocimiento de lenguaje de señas mexicano (LSM)",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Configurar CORS (permitir requests desde frontend)
@@ -35,7 +36,7 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs",
-        "health": "/api/v1/health"
+        "health": "/api/v1/health",
     }
 
 
@@ -46,15 +47,16 @@ async def startup_event():
     print("SignSpeak Vision API - Starting")
     print("=" * 60)
     print("Loading ML models...")
-    
+
     # Pre-cargar modelos (carga lazy, solo cuando se hace first request)
     from core.predictor import get_predictor
+
     try:
-        predictor = get_predictor()
+        get_predictor()
         print("✓ Models loaded successfully")
     except Exception as e:
         print(f"✗ Error loading models: {e}")
-    
+
     print("=" * 60)
     print("API ready!")
     print("Docs: http://localhost:8000/docs")

@@ -1,10 +1,11 @@
 """
 Health Check Endpoints
 """
-from fastapi import APIRouter
-from datetime import datetime, timedelta
-from src.settings import settings
 
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter
+from src.settings import settings
 
 # Crear router
 router = APIRouter(
@@ -50,7 +51,7 @@ async def system_status():
             "api_gateway": "healthy",
             "translation_service": "not_implemented",
             "ml_service": "not_implemented",
-            "storage_service": "not_implemented"
+            "storage_service": "not_implemented",
         },
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }

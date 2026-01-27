@@ -1,11 +1,8 @@
 from fastapi import APIRouter, HTTPException
+
 from src.schemas.translate import TranslateRequest, TranslateResponse
 
-
-router = APIRouter(
-    prefix="/api/v1/translate",
-    tags=["Translation Service"]
-)
+router = APIRouter(prefix="/api/v1/translate", tags=["Translation Service"])
 
 
 @router.post("/", response_model=TranslateResponse)
@@ -18,11 +15,7 @@ async def translate(request: TranslateRequest):
 
     if request.text:
         return TranslateResponse(
-            text=f"[ML] Traducción de: {request.text}",
-            confidence=0.93
+            text=f"[ML] Traducción de: {request.text}", confidence=0.93
         )
 
-    return TranslateResponse(
-        text="[ML] Hola, ¿cómo estás?",
-        confidence=0.95
-    )
+    return TranslateResponse(text="[ML] Hola, ¿cómo estás?", confidence=0.95)

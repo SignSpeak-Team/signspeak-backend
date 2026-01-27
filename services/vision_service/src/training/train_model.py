@@ -1,9 +1,8 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from tensorflow import keras
-from keras.models import Sequential
+import numpy as np
 from keras.layers import Dense, Dropout
+from keras.models import Sequential
+from sklearn.model_selection import train_test_split
 
 # Ruta a los datos
 DATA_PATH = "../../datasets/processed"
@@ -18,10 +17,11 @@ print(f"Datos cargados: {X_train.shape[0]} muestras")
 
 # Mezclar y dividir datos (IMPORTANTE para evitar overfitting)
 X_train_split, X_val, y_train_split, y_val = train_test_split(
-    X_train, y_train,
-    test_size=0.2,       # 20% para validacion
-    random_state=42,     # Reproducibilidad
-    stratify=y_train     # Mantener proporcion de clases
+    X_train,
+    y_train,
+    test_size=0.2,  # 20% para validacion
+    random_state=42,  # Reproducibilidad
+    stratify=y_train,  # Mantener proporcion de clases
 )
 
 print(f"Train: {X_train_split.shape[0]} | Val: {X_val.shape[0]}")
@@ -31,20 +31,20 @@ num_classes = len(set(y_train))
 print(f"Clases: {num_classes}")
 
 # Crear modelo
-model = Sequential([
-    Dense(128, activation='relu', input_shape=(63,)),
-    Dropout(0.3),
-    Dense(64, activation='relu'),
-    Dense(num_classes, activation='softmax')
-])
+model = Sequential(
+    [
+        Dense(128, activation="relu", input_shape=(63,)),
+        Dropout(0.3),
+        Dense(64, activation="relu"),
+        Dense(num_classes, activation="softmax"),
+    ]
+)
 
 model.summary()
 
 # Compilar
 model.compile(
-    optimizer='adam',
-    loss='sparse_categorical_crossentropy',
-    metrics=['accuracy']
+    optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"]
 )
 
 # Entrenar
@@ -54,7 +54,7 @@ history = model.fit(
     y_train_split,
     epochs=30,
     batch_size=32,
-    validation_data=(X_val, y_val)
+    validation_data=(X_val, y_val),
 )
 
 # Guardar modelo
@@ -66,20 +66,20 @@ print("\nGenerando graficas...")
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
 # Grafica de accuracy
-ax1.plot(history.history['accuracy'], label='Train')
-ax1.plot(history.history['val_accuracy'], label='Validation')
-ax1.set_title('Precision - Letras Estaticas (21)')
-ax1.set_xlabel('Epoca')
-ax1.set_ylabel('Accuracy')
+ax1.plot(history.history["accuracy"], label="Train")
+ax1.plot(history.history["val_accuracy"], label="Validation")
+ax1.set_title("Precision - Letras Estaticas (21)")
+ax1.set_xlabel("Epoca")
+ax1.set_ylabel("Accuracy")
 ax1.legend()
 ax1.grid(True)
 
 # Grafica de loss
-ax2.plot(history.history['loss'], label='Train')
-ax2.plot(history.history['val_loss'], label='Validation')
-ax2.set_title('Perdida - Letras Estaticas (21)')
-ax2.set_xlabel('Epoca')
-ax2.set_ylabel('Loss')
+ax2.plot(history.history["loss"], label="Train")
+ax2.plot(history.history["val_loss"], label="Validation")
+ax2.set_title("Perdida - Letras Estaticas (21)")
+ax2.set_xlabel("Epoca")
+ax2.set_ylabel("Loss")
 ax2.legend()
 ax2.grid(True)
 

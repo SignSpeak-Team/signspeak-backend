@@ -1,18 +1,16 @@
 """API Request Models."""
 
 from pydantic import BaseModel, Field, field_validator
-from typing import List
 
 
 class LandmarksRequest(BaseModel):
     """Static prediction: 21 hand landmarks (63 features)."""
-    
-    landmarks: List[List[float]] = Field(
-        ..., min_length=21, max_length=21,
-        description="21 landmarks [x,y,z] each"
+
+    landmarks: list[list[float]] = Field(
+        ..., min_length=21, max_length=21, description="21 landmarks [x,y,z] each"
     )
-    
-    @field_validator('landmarks')
+
+    @field_validator("landmarks")
     @classmethod
     def validate_coords(cls, v):
         for i, lm in enumerate(v):
@@ -23,28 +21,33 @@ class LandmarksRequest(BaseModel):
 
 class SequenceRequest(BaseModel):
     """Dynamic/Words prediction: 15 frames x 21 landmarks."""
-    
-    sequence: List[List[List[float]]] = Field(
-        ..., min_length=15, max_length=15,
-        description="15 frames, each with 21 landmarks"
+
+    sequence: list[list[list[float]]] = Field(
+        ...,
+        min_length=15,
+        max_length=15,
+        description="15 frames, each with 21 landmarks",
     )
-    
-    @field_validator('sequence')
+
+    @field_validator("sequence")
     @classmethod
     def validate_sequence(cls, v):
         for f_idx, frame in enumerate(v):
             if len(frame) != 21:
-                raise ValueError(f"Frame {f_idx}: expected 21 landmarks, got {len(frame)}")
+                raise ValueError(
+                    f"Frame {f_idx}: expected 21 landmarks, got {len(frame)}"
+                )
             for l_idx, lm in enumerate(frame):
                 if len(lm) != 3:
-                    raise ValueError(f"Frame {f_idx}, landmark {l_idx}: expected 3 coords")
+                    raise ValueError(
+                        f"Frame {f_idx}, landmark {l_idx}: expected 3 coords"
+                    )
         return v
 
 
 class HolisticRequest(BaseModel):
     """Holistic prediction: 226 features (pose + hands)."""
-    
-    landmarks: List[float] = Field(
-        ..., min_length=226, max_length=226,
-        description="226 holistic features"
+
+    landmarks: list[float] = Field(
+        ..., min_length=226, max_length=226, description="226 holistic features"
     )

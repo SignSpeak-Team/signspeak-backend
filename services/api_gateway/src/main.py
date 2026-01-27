@@ -1,9 +1,9 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from src.settings import settings
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.routes import health, translate
+from src.settings import settings
 
 
 @asynccontextmanager

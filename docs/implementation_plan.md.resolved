@@ -1,0 +1,44 @@
+# Smart Cascade Implementation Plan
+
+## Goal
+Automatic model selection with minimal latency (<15ms avg on RTX 3050)
+
+## Architecture
+
+### 1. Context Detection (~2ms)
+- Detect pose landmarks (holistic needed?)
+- Detect movement (dynamic vs static)
+- Sequence length (letters vs words)
+
+### 2. Parallel GPU Inference (~10-15ms)
+```python
+# Execute only relevant models
+if has_pose:
+    futures.append(executor.submit(holistic_model))
+if has_movement and sequence_ready:
+    futures.append(executor.submit(words_model))
+    futures.append(executor.submit(dynamic_model))
+futures.append(executor.submit(static_model))  # Always as fallback
+```
+
+### 3. Early Exit (~1ms)
+- Return first prediction with confidence >0.85
+- If none, return highest confidence
+
+## Changes
+
+### Core - [predictor.py](file:///c:/Users/alan1/PycharmProjects/signSpeak/services/vision_service/src/core/predictor.py)
+- [x] Add `predict_auto()` method
+- [ ] Implement context detection
+- [ ] Add parallel execution with ThreadPoolExecutor
+- [ ] Early-exit logic
+
+### Demo - [realtime_demo.py](file:///c:/Users/alan1/PycharmProjects/signSpeak/services/vision_service/src/realtime_demo.py)
+- [ ] Add Mode 0: AUTO (default)
+- [ ] Remove manual switching in main flow
+- [ ] Keep manual modes for testing
+
+## Expected Performance
+- Latency: 12-18ms (RTX 3050)
+- FPS: 55-80
+- Memory: Same (~3GB)

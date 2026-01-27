@@ -1,8 +1,9 @@
 """Endpoints para health checks y información del servicio"""
 
-from fastapi import APIRouter, Depends
-from api.models.response import HealthResponse, ModelsInfoResponse
 from core.predictor import SignPredictor, get_predictor
+from fastapi import APIRouter, Depends
+
+from api.models.response import HealthResponse, ModelsInfoResponse
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
@@ -11,20 +12,20 @@ router = APIRouter(prefix="/health", tags=["Health"])
 async def health_check():
     """
     Verifica el estado del servicio.
-    
+
     Returns:
         HealthResponse con status, version y estado de modelos
     """
     try:
-        predictor = get_predictor()
+        get_predictor()
         models_loaded = True
     except Exception:
         models_loaded = False
-    
+
     return HealthResponse(
         status="healthy" if models_loaded else "unhealthy",
         version="1.0.0",
-        models_loaded=models_loaded
+        models_loaded=models_loaded,
     )
 
 
@@ -32,7 +33,7 @@ async def health_check():
 async def models_info(predictor: SignPredictor = Depends(get_predictor)):
     """
     Retorna información sobre los modelos ML cargados.
-    
+
     Returns:
         ModelsInfoResponse con info de modelos estático y dinámico
     """

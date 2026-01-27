@@ -27,11 +27,11 @@ HOLISTIC_LABEL_ENCODER_PATH = MODELS_DIR / "holistic_label_encoder.pkl"
 HAND_LANDMARKER_PATH = MODELS_DIR / "hand_landmarker.task"
 
 # === Model Input Shapes ===
-SEQUENCE_LENGTH = 15           # Frames for alphabet/words
-NUM_FEATURES = 63              # 21 hand landmarks * 3
+SEQUENCE_LENGTH = 15  # Frames for alphabet/words
+NUM_FEATURES = 63  # 21 hand landmarks * 3
 
 HOLISTIC_SEQUENCE_LENGTH = 30  # Frames for holistic
-HOLISTIC_NUM_FEATURES = 226    # Pose + both hands
+HOLISTIC_NUM_FEATURES = 226  # Pose + both hands
 
 # === Detection Thresholds ===
 MOVEMENT_THRESHOLD = 0.15

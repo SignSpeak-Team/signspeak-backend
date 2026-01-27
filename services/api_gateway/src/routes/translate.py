@@ -7,6 +7,7 @@ router = APIRouter(
     tags=["Translation"],
 )
 
+
 @router.post("/", response_model=TranslateResponse)
 async def translate_sign_language(request: TranslateRequest):
     try:
@@ -23,4 +24,4 @@ async def translate_sign_language(request: TranslateRequest):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(e),
-        )
+        ) from e
