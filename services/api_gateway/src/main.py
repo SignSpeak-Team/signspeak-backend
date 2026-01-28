@@ -1,14 +1,16 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.routes import health, translate
+from src.routes import health, prediction, translate
 from src.settings import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # Startup - track start time for uptime calculation
+    app.state.start_time = datetime.now()
     print(f"🚀 {settings.SERVICE_NAME} v{settings.VERSION} iniciando...")
     print(f"📍 Entorno: {settings.ENVIRONMENT}")
     print(
@@ -17,6 +19,7 @@ async def lifespan(app: FastAPI):
     print(
         f"📚 Documentación: http://{settings.API_GATEWAY_HOST}:{settings.API_GATEWAY_PORT}/docs"
     )
+    print(f"🎯 Vision Service: {settings.VISION_SERVICE_URL}")
     yield
     # Shutdown
     print(f"🛑 {settings.SERVICE_NAME} detenido")
@@ -41,3 +44,5 @@ app.add_middleware(
 # Routers
 app.include_router(health.router)
 app.include_router(translate.router)
+app.include_router(prediction.router)
+
