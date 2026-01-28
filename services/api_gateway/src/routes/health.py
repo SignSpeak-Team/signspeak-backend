@@ -1,13 +1,11 @@
-"""
-Health Check Endpoints
-"""
+"""Health Check Endpoints."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from src.services import vision_client
 from src.settings import settings
 
-# Crear router
 router = APIRouter(
     prefix="/api/v1",
     tags=["Health"],
@@ -16,42 +14,76 @@ router = APIRouter(
 
 @router.get("/")
 async def root():
-    """Endpoint raíz"""
+    """Root endpoint with API information."""
     return {
-        "service": "API Gateway",
-        "version": "1.0.0",
+        "service": settings.SERVICE_NAME,
+        "version": settings.VERSION,
         "status": "running",
-        "environment": "development",
+        "environment": settings.ENVIRONMENT,
         "docs": "/docs",
+        "endpoints": {
+            "health": "/api/v1/health",
+            "status": "/api/v1/status",
+            "predict_static": "/api/v1/predict/static",
+            "predict_dynamic": "/api/v1/predict/dynamic",
+            "predict_words": "/api/v1/predict/words",
+            "predict_holistic": "/api/v1/predict/holistic",
+        },
     }
 
 
 @router.get("/health")
 async def health_check():
-    """Health Check"""
+    """
+    Simple health check for container orchestration.
+
+    Returns minimal response for fast health checks.
+    """
     return {
         "status": "healthy",
-        "service": "API Gateway",
-        "version": "1.0.0",
+        "service": settings.SERVICE_NAME,
+        "version": settings.VERSION,
     }
 
 
 @router.get("/status")
-async def system_status():
-    uptime_seconds = 7200
-    uptime = str(timedelta(seconds=uptime_seconds))
+async def system_status(request: Request):
+    """
+    Detailed system status with downstream service checks.
+
+    Includes uptime, environment info, and health of connected services.
+    """
+    # Calculate real uptime
+    start_time = getattr(request.app.state, "start_time", datetime.now())
+    uptime = datetime.now() - start_time
+    uptime_str = str(uptime).split(".")[0]  # Remove microseconds
+
+    # Check downstream services
+    services_status = {
+        "api_gateway": "healthy",
+        "vision_service": "unknown",
+        "translation_service": "placeholder",  # Not yet integrated
+    }
+
+    # Check Vision Service health
+    try:
+        vision_health = await vision_client.health_check()
+        services_status["vision_service"] = vision_health.get("status", "healthy")
+    except Exception:
+        services_status["vision_service"] = "unhealthy"
+
+    # Determine overall status
+    overall_status = (
+        "operational"
+        if services_status["vision_service"] == "healthy"
+        else "degraded"
+    )
 
     return {
-        "status": "operational",
-        "version": settings.SERVICE_NAME + " " + settings.VERSION,
-        "uptime": uptime,
+        "status": overall_status,
+        "version": f"{settings.SERVICE_NAME} {settings.VERSION}",
+        "uptime": uptime_str,
         "environment": settings.ENVIRONMENT,
-        "total_translations": 42,  # Simulado - luego será de BD
-        "active_services": {
-            "api_gateway": "healthy",
-            "translation_service": "not_implemented",
-            "ml_service": "not_implemented",
-            "storage_service": "not_implemented",
-        },
+        "active_services": services_status,
         "timestamp": datetime.now().isoformat(),
     }
