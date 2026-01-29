@@ -11,12 +11,14 @@ SignSpeak utiliza MediaPipe para detección de manos y TensorFlow para clasifica
 ## 🏗️ Arquitectura
 
 **4 Microservicios principales:**
+
 - **API Gateway** (8000): Punto de entrada, autenticación, rate limiting
 - **Translation Service** (8001): Orquestación de traducciones
 - **ML Service** (8002): Detección y clasificación de señas
 - **Storage Service** (8003): Gestión de archivos multimedia
 
 **Infraestructura:**
+
 - PostgreSQL (metadata), MongoDB (métricas), MinIO (archivos)
 - RabbitMQ (comunicación asíncrona entre servicios)
 - Docker & Kubernetes (containerización y orquestación)
@@ -35,6 +37,7 @@ SignSpeak utiliza MediaPipe para detección de manos y TensorFlow para clasifica
 ## 🚀 Quick Start
 
 ### Instalación
+
 ```bash
 # Clonar repositorio
 git clone https://github.com/alanctinaDev/signSpeak.git
@@ -51,6 +54,7 @@ docker-compose ps
 ```
 
 ### Endpoints principales
+
 ```
 API Documentation:  http://localhost:8000/docs
 Translation API:    http://localhost:8001/docs
@@ -65,6 +69,7 @@ MinIO Console:      http://localhost:9001
 ## 📦 Comandos Útiles
 
 ### Docker
+
 ```bash
 # Ver logs de un servicio
 docker-compose logs -f <service-name>
@@ -80,6 +85,7 @@ docker-compose down -v
 ```
 
 ### Testing
+
 ```bash
 # Ejecutar tests
 pytest
@@ -89,6 +95,7 @@ pytest --cov=src --cov-report=html
 ```
 
 ### Kubernetes (Producción)
+
 ```bash
 # Deploy
 kubectl apply -f infrastructure/kubernetes/
@@ -103,6 +110,7 @@ kubectl logs -f <pod-name> -n signspeak
 ---
 
 ## 📁 Estructura
+
 ```
 signSpeak/
 ├── services/              # Microservicios
