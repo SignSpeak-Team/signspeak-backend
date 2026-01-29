@@ -55,3 +55,9 @@ Thumbs.db
 *.log
 tmp/
 temp/
+
+# ==================================
+# DOCUMENTACIÓN (solo local)
+# ==================================
+docs/
+*.md.resolved
