@@ -53,7 +53,7 @@ jobs:
           pip install -r services/vision_service/requirements.txt
       
       - name: Run Vision Service tests
-        run: pytest tests/unit/test_vision_service.py -v --tb=short
+        run: pytest tests/unit/vision_service/ -v --tb=short
         env:
           PYTHONPATH: ${{ github.workspace }}/services/vision_service/src
 
