@@ -57,10 +57,35 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/services/vision_service/src
 
+  test-api-gateway:
+    name: Test API Gateway
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements-dev.txt
+          pip install -r services/api_gateway/requirements.txt
+      
+      - name: Run API Gateway tests
+        run: pytest tests/unit/api_gateway/ -v --tb=short
+        env:
+          PYTHONPATH: ${{ github.workspace }}/services/api_gateway
+
   test-all:
     name: Full Test Suite
     runs-on: ubuntu-latest
-    needs: [code-quality, test-vision-service]
+    needs: [code-quality, test-vision-service, test-api-gateway]
     
     steps:
       - name: Checkout code
@@ -76,6 +101,7 @@ jobs:
         run: |
           pip install -r requirements-dev.txt
           pip install -r services/vision_service/requirements.txt
+          pip install -r services/api_gateway/requirements.txt
       
       - name: Run all tests with coverage
         run: |
