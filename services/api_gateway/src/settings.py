@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     API_GATEWAY_HOST: str = "0.0.0.0"
     API_GATEWAY_PORT: int = int(os.getenv("PORT", "8000"))
 
-    # CORS
+    # CORS - Configure for your React app domain in production
     CORS_ORIGINS: list[str] = ["*"]
 
     # Downstream services - Lee de env vars en producción
@@ -24,6 +24,10 @@ class Settings(BaseSettings):
         "VISION_SERVICE_URL",
         "http://vision-service:8002"
     )
+
+    # HTTP Client Configuration
+    HTTP_TIMEOUT: float = 30.0  # seconds
+    HTTP_CONNECT_TIMEOUT: float = 5.0  # seconds
 
     class Config:
         env_file = ".env"
