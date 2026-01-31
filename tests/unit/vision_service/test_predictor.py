@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 # Agregar vision_service al path
-VISION_SERVICE_PATH = Path(__file__).parent.parent.parent / "services" / "vision_service" / "src"
+VISION_SERVICE_PATH = Path(__file__).parent.parent.parent.parent / "services" / "vision_service" / "src"
 if str(VISION_SERVICE_PATH) not in sys.path:
     sys.path.insert(0, str(VISION_SERVICE_PATH))
 
