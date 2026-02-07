@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import health, prediction
+from api.routes import health, media, prediction
+from prometheus_client import make_asgi_app
 
 # Crear aplicación FastAPI
 app = FastAPI(
@@ -11,6 +12,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Prometheus metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 # Configurar CORS (permitir requests desde frontend)
 app.add_middleware(
@@ -24,6 +29,7 @@ app.add_middleware(
 # Incluir routers
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(prediction.router, prefix="/api/v1")
+app.include_router(media.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Root"])

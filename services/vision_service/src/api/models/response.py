@@ -60,3 +60,35 @@ class ErrorResponse(BaseModel):
 
     detail: str
     error_code: str = "ERROR"
+
+
+class VideoSegment(BaseModel):
+    word: str
+    start_time: float
+    end_time: float
+    confidence: float
+
+
+class DetectionStats(BaseModel):
+    """Statistics about the detection process."""
+
+    total_windows: int = 0
+    detected_words: int = 0
+    filtered_words: int = 0
+    average_confidence: float = 0.0
+    filter_rate: float = 0.0
+
+
+class VideoTranslationResponse(BaseModel):
+    """Video translation response with timing breakdown."""
+
+    word: str
+    confidence: float
+    extraction_time_ms: float
+    prediction_time_ms: float
+    total_time_ms: float
+    frames_processed: int
+    segments: list[VideoSegment] = Field(default_factory=list)
+    detection_stats: DetectionStats | None = None
+
+
