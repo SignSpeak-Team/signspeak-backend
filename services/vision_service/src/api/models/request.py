@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field, field_validator
 
 
-class LandmarksRequest(BaseModel):
+class StaticLandmarksRequest(BaseModel):
     """Static prediction: 21 hand landmarks (63 features)."""
 
     landmarks: list[list[float]] = Field(
@@ -19,7 +19,7 @@ class LandmarksRequest(BaseModel):
         return v
 
 
-class SequenceRequest(BaseModel):
+class TemporalSequenceRequest(BaseModel):
     """Dynamic/Words prediction: 15 frames x 21 landmarks."""
 
     sequence: list[list[list[float]]] = Field(
@@ -51,3 +51,7 @@ class HolisticRequest(BaseModel):
     landmarks: list[float] = Field(
         ..., min_length=226, max_length=226, description="226 holistic features"
     )
+
+# Aliases for backward compatibility
+LandmarksRequest = StaticLandmarksRequest
+SequenceRequest = TemporalSequenceRequest

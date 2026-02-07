@@ -12,11 +12,12 @@ class HolisticExtractor:
 
     def __init__(
         self,
+        static_image_mode: bool = False,
         min_detection_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
     ):
         self.holistic = mp.solutions.holistic.Holistic(
-            static_image_mode=False,
+            static_image_mode=static_image_mode,
             model_complexity=1,
             min_detection_confidence=min_detection_confidence,
             min_tracking_confidence=min_tracking_confidence,
@@ -30,8 +31,12 @@ class HolisticExtractor:
         Returns None if no landmarks detected.
         """
         results = self.holistic.process(frame_rgb)
+        
+        print(f"[DEBUG] Holistic Results: Pose={bool(results.pose_landmarks)}, Left={bool(results.left_hand_landmarks)}, Right={bool(results.right_hand_landmarks)}")
+        # ---------------------------
 
         if not self._has_valid_landmarks(results):
+            print("[DEBUG] No valid landmarks found in extracted results.")
             return None
 
         features = []

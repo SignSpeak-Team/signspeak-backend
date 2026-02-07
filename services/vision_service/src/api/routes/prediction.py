@@ -4,7 +4,11 @@ import numpy as np
 from core.predictor import SignPredictor, get_predictor
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.models.request import HolisticRequest, LandmarksRequest, SequenceRequest
+from api.models.request import (
+    HolisticRequest,
+    StaticLandmarksRequest,
+    TemporalSequenceRequest,
+)
 from api.models.response import (
     BufferStatsResponse,
     PredictionResponse,
@@ -19,9 +23,23 @@ router = APIRouter(prefix="/predict", tags=["Prediction"])
 
 @router.post("/static", response_model=PredictionResponse)
 async def predict_static(
-    request: LandmarksRequest, predictor: SignPredictor = Depends(get_predictor)
+    request: StaticLandmarksRequest, predictor: SignPredictor = Depends(get_predictor)
 ):
-    """Predict static letter (21 landmarks → 63 features)."""
+    """
+    Predict static letter from hand landmarks.
+
+    **Input:** 21 landmarks × 3 coordinates (x, y, z normalized 0-1)
+
+    **Vocabulary:** A, B, C, D, E, F, G, H, I, L, M, N, O, P, R, S, T, U, V, W, Y
+
+    **Landmark Order (MediaPipe):**
+    - 0: WRIST
+    - 1-4: THUMB (CMC, MCP, IP, TIP)
+    - 5-8: INDEX_FINGER
+    - 9-12: MIDDLE_FINGER
+    - 13-16: RING_FINGER
+    - 17-20: PINKY
+    """
     try:
         landmarks = np.array(request.landmarks).flatten()
         return PredictionResponse(**predictor.predict_static(landmarks))
@@ -31,7 +49,7 @@ async def predict_static(
 
 @router.post("/dynamic", response_model=PredictionResponse)
 async def predict_dynamic(
-    request: SequenceRequest, predictor: SignPredictor = Depends(get_predictor)
+    request: TemporalSequenceRequest, predictor: SignPredictor = Depends(get_predictor)
 ):
     """Predict dynamic letter (15 frames × 63 features)."""
     try:
@@ -49,7 +67,7 @@ async def predict_dynamic(
 
 @router.post("/words", response_model=WordPredictionResponse)
 async def predict_words(
-    request: SequenceRequest, predictor: SignPredictor = Depends(get_predictor)
+    request: TemporalSequenceRequest, predictor: SignPredictor = Depends(get_predictor)
 ):
     """Predict word with buffer filtering (15 frames × 63 features)."""
     try:
