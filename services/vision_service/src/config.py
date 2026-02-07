@@ -46,3 +46,10 @@ MEDIUM_CONFIDENCE_THRESHOLD = 60
 HIGH_CONFIDENCE_COOLDOWN = 2
 MEDIUM_CONFIDENCE_COOLDOWN = 1
 PREDICTION_INTERVAL = 3
+
+# === Continuous Detection ===
+DEFAULT_WINDOW_SIZE_SEC = 2.0  # Optimal for sign language (1-1.5s per sign)
+DEFAULT_STRIDE_SEC = 0.75  # 50% overlap for better transition detection
+MIN_WINDOW_CONFIDENCE = 60.0  # Filter weak predictions
+DUPLICATE_TIME_THRESHOLD = 1.5  # Seconds to consider temporal duplicate
+MIN_WINDOW_FILL_RATIO = 0.75  # Minimum 75% of window must have frames

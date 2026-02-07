@@ -19,6 +19,7 @@ from config import (
     WORDS_LABEL_ENCODER_PATH,
     WORDS_MODEL_PATH,
 )
+from core.metrics import PREDICTION_CONFIDENCE, PREDICTION_LATENCY, PREDICTIONS_TOTAL
 from tensorflow import keras
 from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout, InputLayer
 from tensorflow.keras.models import Sequential
@@ -116,6 +117,11 @@ class SignPredictor:
         pred = self.static_model.predict(landmarks.reshape(1, -1), verbose=0)
         idx, conf = self._get_prediction(pred)
 
+        # Record metrics
+        PREDICTION_LATENCY.labels(model_type='static').observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type='static', status='success').inc()
+        PREDICTION_CONFIDENCE.labels(model_type='static').observe(conf)
+
         return {
             "letter": self.static_labels[idx],
             "confidence": round(conf, 2),
@@ -132,6 +138,11 @@ class SignPredictor:
             sequence.reshape(1, SEQUENCE_LENGTH, 63), verbose=0
         )
         idx, conf = self._get_prediction(pred)
+
+        # Record metrics
+        PREDICTION_LATENCY.labels(model_type='dynamic').observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type='dynamic', status='success').inc()
+        PREDICTION_CONFIDENCE.labels(model_type='dynamic').observe(conf)
 
         return {
             "letter": self.lstm_labels[idx],
@@ -155,6 +166,11 @@ class SignPredictor:
         )
         idx, conf = self._get_prediction(pred)
 
+        # Record metrics
+        PREDICTION_LATENCY.labels(model_type='word').observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type='word', status='success').inc()
+        PREDICTION_CONFIDENCE.labels(model_type='word').observe(conf)
+
         return {
             "word": self.words_labels.get(idx, "UNKNOWN"),
             "confidence": round(conf, 2),
@@ -177,6 +193,36 @@ class SignPredictor:
             verbose=0,
         )
         idx, conf = self._get_prediction(pred)
+
+        # Record metrics
+        PREDICTION_LATENCY.labels(model_type='holistic').observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type='holistic', status='success').inc()
+        PREDICTION_CONFIDENCE.labels(model_type='holistic').observe(conf)
+
+        return {
+            "word": self.holistic_labels.get(idx, "UNKNOWN"),
+            "confidence": round(conf, 2),
+            "type": "holistic_medical",
+            "processing_time_ms": round((time.time() - start) * 1000, 2),
+        }
+
+    def predict_holistic_sequence(self, sequence: np.ndarray) -> dict[str, Any]:
+        """Predict from complete holistic sequence (30 frames × 226 features)."""
+        self._validate_shape(
+            sequence, (HOLISTIC_SEQUENCE_LENGTH, HOLISTIC_NUM_FEATURES)
+        )
+
+        start = time.time()
+        pred = self.holistic_model.predict(
+            sequence.reshape(1, HOLISTIC_SEQUENCE_LENGTH, HOLISTIC_NUM_FEATURES),
+            verbose=0,
+        )
+        idx, conf = self._get_prediction(pred)
+
+        # Record metrics
+        PREDICTION_LATENCY.labels(model_type='holistic_sequence').observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type='holistic_sequence', status='success').inc()
+        PREDICTION_CONFIDENCE.labels(model_type='holistic_sequence').observe(conf)
 
         return {
             "word": self.holistic_labels.get(idx, "UNKNOWN"),
