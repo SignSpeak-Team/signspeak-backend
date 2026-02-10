@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 
 # Forzar UTF-8 en stdout (Windows usa cp1252 por defecto)
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
 # --- Rutas ---
 BASE_PATH = Path(__file__).parent.parent.parent
@@ -30,14 +30,14 @@ EXCEL_PATH = DATASET_PATH / "clases.xlsx"
 
 # --- Constantes ---
 TARGET_SIZE = (640, 480)
-MIN_VALID_FRAMES = 5
+MIN_VALID_FRAMES = 3
 POSE_ARM_INDICES = [11, 12, 13, 14, 15, 16]
 NUM_HAND_FEATURES = 21 * 3
 NUM_FEATURES = (NUM_HAND_FEATURES * 2) + (len(POSE_ARM_INDICES) * 3)  # 144
 
 
 def preprocess_image(image: np.ndarray) -> np.ndarray:
-    """Resize a 640x480 con padding + CLAHE para fondo negro."""
+    """Resize a 640x480 con padding + gamma correction + CLAHE."""
     h, w = image.shape[:2]
     scale = min(TARGET_SIZE[0] / w, TARGET_SIZE[1] / h)
     new_w, new_h = int(w * scale), int(h * scale)
@@ -49,8 +49,22 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
     y_off = (TARGET_SIZE[1] - new_h) // 2
     canvas[y_off:y_off + new_h, x_off:x_off + new_w] = resized
 
+    # Gamma correction adaptativo para imagenes oscuras
+    mean = canvas.mean()
+    if mean < 50:
+        gamma = 0.4
+    elif mean < 80:
+        gamma = 0.6
+    else:
+        gamma = 1.0
+
+    if gamma < 1.0:
+        table = np.array([((i / 255.0) ** gamma) * 255 for i in range(256)]).astype("uint8")
+        canvas = cv2.LUT(canvas, table)
+
+    # CLAHE sobre canal L
     lab = cv2.cvtColor(canvas, cv2.COLOR_BGR2LAB)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
     lab[:, :, 0] = clahe.apply(lab[:, :, 0])
     return cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
@@ -139,7 +153,7 @@ class HolisticDatasetProcessor:
         self.holistic = mp.solutions.holistic.Holistic(
             static_image_mode=True,
             model_complexity=2,
-            min_detection_confidence=0.5,
+            min_detection_confidence=0.3,
         )
         self.subset = subset
         self.sequence_lengths: list[int] = []
