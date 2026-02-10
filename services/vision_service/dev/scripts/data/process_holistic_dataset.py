@@ -9,6 +9,8 @@ Uso:
 
 import argparse
 import pickle
+import sys
+import io
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +18,9 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import pandas as pd
+
+# Forzar UTF-8 en stdout (Windows usa cp1252 por defecto)
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # --- Rutas ---
 BASE_PATH = Path(__file__).parent.parent.parent
@@ -27,7 +32,7 @@ EXCEL_PATH = DATASET_PATH / "clases.xlsx"
 TARGET_SIZE = (640, 480)
 MIN_VALID_FRAMES = 5
 POSE_ARM_INDICES = [11, 12, 13, 14, 15, 16]
-NUM_HAND_FEATURES = 21 * 3  # 63 por mano
+NUM_HAND_FEATURES = 21 * 3
 NUM_FEATURES = (NUM_HAND_FEATURES * 2) + (len(POSE_ARM_INDICES) * 3)  # 144
 
 
@@ -51,7 +56,7 @@ def preprocess_image(image: np.ndarray) -> np.ndarray:
 
 
 def normalize_and_scale(raw_features: list[float]) -> list[float]:
-    """Escala features a rango [-1, 1] usando la distancia máxima."""
+    """Escala features a rango [-1, 1]."""
     arr = np.array(raw_features)
     max_val = np.max(np.abs(arr))
     if max_val > 0:
@@ -72,7 +77,7 @@ def extract_hand_features(hand_landmarks) -> list[float]:
 
 
 def extract_pose_arm_features(pose_landmarks) -> list[float]:
-    """Extrae 18 features de brazos (hombros, codos, muñecas), centrados al torso."""
+    """Extrae 18 features de brazos (hombros, codos, muñecas)."""
     if not pose_landmarks:
         return [0.0] * (len(POSE_ARM_INDICES) * 3)
 
@@ -187,15 +192,15 @@ class HolisticDatasetProcessor:
             return 15
 
         p90 = int(np.percentile(self.sequence_lengths, 90))
-        print(f"\n📊 Longitudes de secuencia:")
+        print(f"\n[STATS] Longitudes de secuencia:")
         print(f"   Rango: {min(self.sequence_lengths)}-{max(self.sequence_lengths)}")
         print(f"   Media: {np.mean(self.sequence_lengths):.1f} | Mediana: {int(np.median(self.sequence_lengths))}")
-        print(f"   ✅ Seleccionado (P90): {p90}")
+        print(f"   -> Seleccionado (P90): {p90}")
         return p90
 
     def process_all(self):
         print("\n" + "=" * 70)
-        print("🤟 PROCESADOR HOLÍSTICO - MSLwords1")
+        print(" PROCESADOR HOLISTICO - MSLwords1")
         print("=" * 70)
 
         word_folders = sorted([
@@ -203,13 +208,12 @@ class HolisticDatasetProcessor:
         ])
         if self.subset:
             word_folders = word_folders[:self.subset]
-            print(f"⚡ Modo subset: {self.subset} clases")
+            print(f"[*] Modo subset: {self.subset} clases")
 
         total = len(word_folders)
-        print(f"📂 Dataset: {DATASET_PATH}")
-        print(f"📝 Clases: {total} | Features: {NUM_FEATURES}\n")
+        print(f"[i] Dataset: {DATASET_PATH}")
+        print(f"[i] Clases: {total} | Features: {NUM_FEATURES}\n")
 
-        # Fase 1: Extracción de landmarks
         start = datetime.now()
         all_data = []
 
@@ -222,11 +226,12 @@ class HolisticDatasetProcessor:
 
             elapsed = (datetime.now() - start).total_seconds()
             eta = (elapsed / i) * (total - i)
-            bar = "█" * int(i / total * 30) + "░" * (30 - int(i / total * 30))
-            icon = "✅" if raw_seqs else "⚠️"
-            print(f"   [{bar}] {i:3d}/{total} | {icon} {word_id:03d}: {word_name:20s} | {len(raw_seqs):2d} seq | ETA: {int(eta)}s")
+            pct = int(i / total * 30)
+            bar = "#" * pct + "." * (30 - pct)
+            icon = "OK" if raw_seqs else "SKIP"
+            print(f"   [{bar}] {i:3d}/{total} | {icon:4s} {word_id:03d}: {word_name:20s} | {len(raw_seqs):2d} seq | ETA: {int(eta)}s")
 
-        # Fase 2: Normalizar y guardar
+        # Normalizar y guardar
         seq_len = self._compute_sequence_length()
         OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -243,7 +248,6 @@ class HolisticDatasetProcessor:
                 np.save(out_dir / f"seq_{j:04d}.npy", normalized)
                 self.stats["sequences"] += 1
 
-        # Guardar label encoder y config
         label_map = {w: i for i, w in enumerate(sorted(set(words_with_data)))}
         with open(OUTPUT_PATH / "holistic_label_encoder.pkl", "wb") as f:
             pickle.dump(label_map, f)
@@ -252,7 +256,6 @@ class HolisticDatasetProcessor:
         with open(OUTPUT_PATH / "config.pkl", "wb") as f:
             pickle.dump(config, f)
 
-        # Reporte
         elapsed_total = (datetime.now() - start).total_seconds()
         self._print_summary(seq_len, len(label_map), elapsed_total)
         self._save_report(seq_len)
@@ -260,20 +263,20 @@ class HolisticDatasetProcessor:
     def _print_summary(self, seq_len: int, num_classes: int, elapsed: float):
         s = self.stats
         print("\n" + "=" * 70)
-        print("✅ COMPLETADO")
+        print(" COMPLETADO")
         print("=" * 70)
-        print(f"   Palabras: {s['words']} | Muestras OK: {s['samples_ok']} | Fallidas: {s['samples_fail']}")
+        print(f"   Palabras: {s['words']} | OK: {s['samples_ok']} | Fallidas: {s['samples_fail']}")
         print(f"   Frames descartados: {s['frames_discarded']}")
         print(f"   Secuencias: {s['sequences']} | Features: {NUM_FEATURES} | Seq length: {seq_len}")
         print(f"   Clases con datos: {num_classes}")
         print(f"   Tiempo: {int(elapsed)}s ({elapsed / 60:.1f} min)")
-        print(f"   📂 {OUTPUT_PATH}")
+        print(f"   Salida: {OUTPUT_PATH}")
         print("=" * 70)
 
     def _save_report(self, seq_len: int):
         report_path = OUTPUT_PATH / "processing_report.txt"
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write(f"Procesamiento Holístico MSLwords1 - {datetime.now():%Y-%m-%d %H:%M}\n")
+            f.write(f"Procesamiento Holistico MSLwords1 - {datetime.now():%Y-%m-%d %H:%M}\n")
             f.write(f"Features: {NUM_FEATURES} | Seq length: {seq_len}\n\n")
             for word_id, word_name, n_seqs in self.stats["detail"]:
                 f.write(f"  {word_id:03d}: {word_name:25s} -> {n_seqs} seq\n")
