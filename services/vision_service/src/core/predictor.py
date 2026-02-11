@@ -24,6 +24,7 @@ from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout, In
 from tensorflow.keras.models import Sequential
 
 from core.word_buffer import WordBuffer
+from core.msg3d_predictor import MSG3DPredictor
 
 
 class SignPredictor:
@@ -34,7 +35,9 @@ class SignPredictor:
         self._load_static_model()
         self._load_dynamic_model()
         self._load_words_model()
+        self._load_words_model()
         self._load_holistic_model()
+        self._load_msg3d_model()
         self._init_buffers()
         print("[Predictor] All models loaded successfully")
 
@@ -93,6 +96,10 @@ class SignPredictor:
         self.holistic_labels = self._load_encoder(HOLISTIC_LABEL_ENCODER_PATH)
         print(f"  ✓ Holistic: {len(self.holistic_labels)} medical words")
 
+    def _load_msg3d_model(self):
+        """Load MSG3D LSE model (300 medical signs)."""
+        self.msg3d_predictor = MSG3DPredictor()
+
     def _load_encoder(self, path) -> dict[int, str]:
         """Load label encoder and invert it (idx -> label)."""
         with open(path, "rb") as f:
@@ -104,6 +111,7 @@ class SignPredictor:
         self.frame_buffer = deque(maxlen=SEQUENCE_LENGTH)
         self.words_buffer = deque(maxlen=SEQUENCE_LENGTH)
         self.holistic_buffer = deque(maxlen=HOLISTIC_SEQUENCE_LENGTH)
+        self.lse_buffer = deque(maxlen=64)  # MSG3D sequence length
         self.word_buffer = WordBuffer()
 
     # === Predictions ===
@@ -185,6 +193,29 @@ class SignPredictor:
             "processing_time_ms": round((time.time() - start) * 1000, 2),
         }
 
+    def predict_lse(self, landmarks: np.ndarray) -> dict[str, Any] | None:
+        """Predict LSE sign from 75 landmarks (MSG3D)."""
+        # Shape: (75, 3)
+        self._validate_shape(landmarks, (75, 3))
+        self.lse_buffer.append(landmarks)
+
+        # Allow prediction with fewer frames? Or wait for buffer fill?
+        # MSG3D handles variable length (Pooling).
+        # But let's require at least 15 frames to be meaningful.
+        if len(self.lse_buffer) < 15:
+            return None
+        
+        # Pass sequence to MSG3D predictor
+        sequence = np.array(list(self.lse_buffer))
+        result = self.msg3d_predictor.predict(sequence)
+        
+        return {
+            "word": result["word"],
+            "confidence": result["confidence"],
+            "type": "lse_msg3d",
+            "processing_time_ms": result["processing_time_ms"]
+        }
+
     def predict_word_with_buffer(self, landmarks: np.ndarray) -> dict[str, Any] | None:
         """Predict word with repetition filtering."""
         result = self.predict_word(landmarks)
@@ -230,6 +261,9 @@ class SignPredictor:
         }
         for buf in buffers.get(buffer_type, []):
             buf.clear()
+        
+        if buffer_type in ["lse", "all"]:
+            self.lse_buffer.clear()
 
     def get_models_info(self) -> dict[str, Any]:
         return {
@@ -237,6 +271,7 @@ class SignPredictor:
             "dynamic": {"count": len(self.lstm_labels), "type": "alphabet"},
             "words": {"count": len(self.words_labels), "type": "vocabulary"},
             "holistic": {"count": len(self.holistic_labels), "type": "medical"},
+            "lse": {"count": len(self.msg3d_predictor.labels), "type": "lse_300"},
         }
 
 

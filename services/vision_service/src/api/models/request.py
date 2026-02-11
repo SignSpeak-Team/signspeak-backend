@@ -51,3 +51,19 @@ class HolisticRequest(BaseModel):
     landmarks: list[float] = Field(
         ..., min_length=226, max_length=226, description="226 holistic features"
     )
+
+
+class LSERequest(BaseModel):
+    """MSG3D prediction: 75 landmarks (Pose 33 + Hands 21*2)."""
+
+    landmarks: list[list[float]] = Field(
+        ..., min_length=75, max_length=75, description="75 landmarks [x,y,z]"
+    )
+
+    @field_validator("landmarks")
+    @classmethod
+    def validate_coords(cls, v):
+        for i, lm in enumerate(v):
+            if len(lm) != 3:
+                raise ValueError(f"Landmark {i}: expected 3 coords, got {len(lm)}")
+        return v
