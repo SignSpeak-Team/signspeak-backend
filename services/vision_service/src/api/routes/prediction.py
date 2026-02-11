@@ -8,6 +8,7 @@ from api.models.request import (
     HolisticRequest,
     StaticLandmarksRequest,
     TemporalSequenceRequest,
+    LSERequest,
 )
 from api.models.response import (
     BufferStatsResponse,
@@ -107,6 +108,25 @@ async def predict_holistic(
         raise HTTPException(400, str(e)) from e
 
 
+@router.post("/lse", response_model=WordPredictionResponse)
+async def predict_lse(
+    request: LSERequest, predictor: SignPredictor = Depends(get_predictor)
+):
+    """Predict LSE sign (MSG3D: 75 landmarks)."""
+    try:
+        # Request.landmarks is list[list[float]] -> (75, 3)
+        landmarks = np.array(request.landmarks)
+        result = predictor.predict_lse(landmarks)
+
+        if result is None:
+            return WordPredictionResponse(
+                word="", confidence=0.0, phrase="", accepted=False, processing_time_ms=0
+            )
+        return WordPredictionResponse(**result)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
 # === Buffer Management ===
 
 
@@ -128,3 +148,10 @@ async def clear_holistic_buffer(predictor: SignPredictor = Depends(get_predictor
     """Clear holistic buffer."""
     predictor.reset_buffer("holistic")
     return {"message": "Holistic buffer cleared"}
+
+
+@router.post("/lse/clear")
+async def clear_lse_buffer(predictor: SignPredictor = Depends(get_predictor)):
+    """Clear LSE buffer."""
+    predictor.reset_buffer("lse")
+    return {"message": "LSE buffer cleared"}

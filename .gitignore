@@ -26,6 +26,7 @@ services/vision_service/dev/datasets_raw/
 services/vision_service/dev/datasets_processed/
 services/vision_service/dev/reports/
 services/vision_service/dev/metadata/
+services/vision_service/dev/training_output/
 
 # Modelos en /models (opcional: usar Git LFS para subir modelos grandes)
 # Descomentar si quieres ignorar modelos (deben descargarse por separado)

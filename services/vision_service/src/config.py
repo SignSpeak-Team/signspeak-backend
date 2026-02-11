@@ -53,3 +53,10 @@ DEFAULT_STRIDE_SEC = 0.75  # 50% overlap for better transition detection
 MIN_WINDOW_CONFIDENCE = 60.0  # Filter weak predictions
 DUPLICATE_TIME_THRESHOLD = 1.5  # Seconds to consider temporal duplicate
 MIN_WINDOW_FILL_RATIO = 0.75  # Minimum 75% of window must have frames
+
+# === MSG3D Model (LSE) ===
+MSG3D_MODEL_PATH = MODELS_DIR / "msg3d_lse.pt"
+MSG3D_LABELS_PATH = MODELS_DIR / "msg3d_labels.pkl"
+MSG3D_NUM_FEATURES = 75  # Keypoints
+MSG3D_CHANNELS = 3      # x, y, z
+MSG3D_SEQUENCE_LENGTH = 64
