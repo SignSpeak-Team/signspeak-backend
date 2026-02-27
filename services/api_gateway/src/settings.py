@@ -1,4 +1,5 @@
 import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -17,12 +18,10 @@ class Settings(BaseSettings):
 
     # Downstream services - Lee de env vars en producción
     TRANSLATION_SERVICE_URL: str = os.getenv(
-        "TRANSLATION_SERVICE_URL", 
-        "http://translation-service:8001"
+        "TRANSLATION_SERVICE_URL", "http://translation-service:8001"
     )
     VISION_SERVICE_URL: str = os.getenv(
-        "VISION_SERVICE_URL",
-        "http://vision-service:8002"
+        "VISION_SERVICE_URL", "http://vision-service:8002"
     )
 
     # HTTP Client Configuration

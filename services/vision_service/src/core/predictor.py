@@ -19,13 +19,13 @@ from config import (
     WORDS_LABEL_ENCODER_PATH,
     WORDS_MODEL_PATH,
 )
-from core.metrics import PREDICTION_CONFIDENCE, PREDICTION_LATENCY, PREDICTIONS_TOTAL
 from tensorflow import keras
 from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout, InputLayer
 from tensorflow.keras.models import Sequential
 
-from core.word_buffer import WordBuffer
+from core.metrics import PREDICTION_CONFIDENCE, PREDICTION_LATENCY, PREDICTIONS_TOTAL
 from core.msg3d_predictor import MSG3DPredictor
+from core.word_buffer import WordBuffer
 
 
 class SignPredictor:
@@ -126,9 +126,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='static').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='static', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='static').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="static").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="static", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="static").observe(conf)
 
         return {
             "letter": self.static_labels[idx],
@@ -148,9 +148,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='dynamic').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='dynamic', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='dynamic').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="dynamic").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="dynamic", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="dynamic").observe(conf)
 
         return {
             "letter": self.lstm_labels[idx],
@@ -175,9 +175,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='word').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='word', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='word').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="word").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="word", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="word").observe(conf)
 
         return {
             "word": self.words_labels.get(idx, "UNKNOWN"),
@@ -203,9 +203,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='holistic').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='holistic', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='holistic').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="holistic").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="holistic", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="holistic").observe(conf)
 
         return {
             "word": self.holistic_labels.get(idx, "UNKNOWN"),
@@ -228,9 +228,11 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='holistic_sequence').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='holistic_sequence', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='holistic_sequence').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="holistic_sequence").observe(
+            time.time() - start
+        )
+        PREDICTIONS_TOTAL.labels(model_type="holistic_sequence", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="holistic_sequence").observe(conf)
 
         return {
             "word": self.holistic_labels.get(idx, "UNKNOWN"),
@@ -250,16 +252,16 @@ class SignPredictor:
         # But let's require at least 15 frames to be meaningful.
         if len(self.lse_buffer) < 15:
             return None
-        
+
         # Pass sequence to MSG3D predictor
         sequence = np.array(list(self.lse_buffer))
         result = self.msg3d_predictor.predict(sequence)
-        
+
         return {
             "word": result["word"],
             "confidence": result["confidence"],
             "type": "lse_msg3d",
-            "processing_time_ms": result["processing_time_ms"]
+            "processing_time_ms": result["processing_time_ms"],
         }
 
     def predict_word_with_buffer(self, landmarks: np.ndarray) -> dict[str, Any] | None:
@@ -307,7 +309,7 @@ class SignPredictor:
         }
         for buf in buffers.get(buffer_type, []):
             buf.clear()
-        
+
         if buffer_type in ["lse", "all"]:
             self.lse_buffer.clear()
 

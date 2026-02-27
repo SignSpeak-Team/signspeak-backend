@@ -12,7 +12,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Agregar Vision Service src al PYTHONPATH
-VISION_SERVICE_PATH = Path(__file__).parent.parent.parent.parent / "services" / "vision_service" / "src"
+VISION_SERVICE_PATH = (
+    Path(__file__).parent.parent.parent.parent / "services" / "vision_service" / "src"
+)
 if str(VISION_SERVICE_PATH) not in sys.path:
     sys.path.insert(0, str(VISION_SERVICE_PATH))
 
@@ -22,6 +24,7 @@ if str(VISION_SERVICE_PATH) not in sys.path:
 def vision_client():
     """Cliente HTTP para Vision Service."""
     from api.main import app
+
     return TestClient(app)
 
 

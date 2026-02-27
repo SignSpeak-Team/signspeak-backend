@@ -74,9 +74,7 @@ async def system_status(request: Request):
 
     # Determine overall status
     overall_status = (
-        "operational"
-        if services_status["vision_service"] == "healthy"
-        else "degraded"
+        "operational" if services_status["vision_service"] == "healthy" else "degraded"
     )
 
     return {

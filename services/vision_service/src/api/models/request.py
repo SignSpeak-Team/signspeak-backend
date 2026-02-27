@@ -52,6 +52,7 @@ class HolisticRequest(BaseModel):
         ..., min_length=226, max_length=226, description="226 holistic features"
     )
 
+
 # Aliases for backward compatibility
 LandmarksRequest = StaticLandmarksRequest
 SequenceRequest = TemporalSequenceRequest

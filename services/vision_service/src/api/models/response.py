@@ -90,5 +90,3 @@ class VideoTranslationResponse(BaseModel):
     frames_processed: int
     segments: list[VideoSegment] = Field(default_factory=list)
     detection_stats: DetectionStats | None = None
-
-

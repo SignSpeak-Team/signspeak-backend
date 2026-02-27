@@ -36,9 +36,7 @@ class SequenceRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "sequence": [
-                    [[0.5, 0.5, 0.0] for _ in range(21)] for _ in range(15)
-                ],
+                "sequence": [[[0.5, 0.5, 0.0] for _ in range(21)] for _ in range(15)],
             }
         }
 

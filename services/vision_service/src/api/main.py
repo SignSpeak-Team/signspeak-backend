@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import make_asgi_app
 
 from api.routes import health, media, prediction
-from prometheus_client import make_asgi_app
 
 # Crear aplicación FastAPI
 app = FastAPI(

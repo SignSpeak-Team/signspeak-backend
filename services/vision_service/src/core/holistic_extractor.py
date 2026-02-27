@@ -31,8 +31,10 @@ class HolisticExtractor:
         Returns None if no landmarks detected.
         """
         results = self.holistic.process(frame_rgb)
-        
-        print(f"[DEBUG] Holistic Results: Pose={bool(results.pose_landmarks)}, Left={bool(results.left_hand_landmarks)}, Right={bool(results.right_hand_landmarks)}")
+
+        print(
+            f"[DEBUG] Holistic Results: Pose={bool(results.pose_landmarks)}, Left={bool(results.left_hand_landmarks)}, Right={bool(results.right_hand_landmarks)}"
+        )
         # ---------------------------
 
         if not self._has_valid_landmarks(results):

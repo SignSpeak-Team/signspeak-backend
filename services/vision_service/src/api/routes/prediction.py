@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.models.request import (
     HolisticRequest,
+    LSERequest,
     StaticLandmarksRequest,
     TemporalSequenceRequest,
-    LSERequest,
 )
 from api.models.response import (
     BufferStatsResponse,

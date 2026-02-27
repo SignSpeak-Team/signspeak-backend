@@ -58,5 +58,5 @@ MIN_WINDOW_FILL_RATIO = 0.75  # Minimum 75% of window must have frames
 MSG3D_MODEL_PATH = MODELS_DIR / "msg3d_lse.pt"
 MSG3D_LABELS_PATH = MODELS_DIR / "msg3d_labels.pkl"
 MSG3D_NUM_FEATURES = 75  # Keypoints
-MSG3D_CHANNELS = 3      # x, y, z
+MSG3D_CHANNELS = 3  # x, y, z
 MSG3D_SEQUENCE_LENGTH = 64
