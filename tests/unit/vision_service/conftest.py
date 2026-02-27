@@ -1,4 +1,9 @@
-"""Fixtures específicos para Vision Service tests."""
+"""Fixtures específicos para Vision Service tests.
+
+NOTE: Los tests que usen `vision_client` cargan TF/Keras/MediaPipe.
+      Están marcados como @pytest.mark.slow y se excluyen del CI ligero.
+      Para correrlos localmente: pytest -m slow
+"""
 
 import sys
 from pathlib import Path
@@ -13,6 +18,7 @@ if str(VISION_SERVICE_PATH) not in sys.path:
 
 
 @pytest.fixture
+@pytest.mark.slow
 def vision_client():
     """Cliente HTTP para Vision Service."""
     from api.main import app
