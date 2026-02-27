@@ -8,9 +8,9 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
 
-    # Server (Railway usa PORT dinámico)
+    # Server — HF Spaces uses port 7860 by default
     API_GATEWAY_HOST: str = "0.0.0.0"
-    API_GATEWAY_PORT: int = int(os.getenv("PORT", "8000"))
+    API_GATEWAY_PORT: int = int(os.getenv("PORT", "7860"))
 
     # CORS - Configure for your React app domain in production
     CORS_ORIGINS: list[str] = ["*"]
