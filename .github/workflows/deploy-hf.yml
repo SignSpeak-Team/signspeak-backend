@@ -1,0 +1,35 @@
+name: Deploy → Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/api_gateway/**'
+      - '.github/workflows/deploy-hf.yml'
+
+jobs:
+  deploy:
+    name: Push to HF Space
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "ci@signspeak"
+          git config --global user.name "SignSpeak CI"
+
+      - name: Push api_gateway to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ secrets.HF_SPACE_ID }}
+        run: |
+          cd services/api_gateway
+          git init
+          git add -A
+          git commit -m "deploy: $(git -C ../.. log -1 --format='%h %s')"
+          git push --force https://alanctinaDev:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE_ID} HEAD:main
