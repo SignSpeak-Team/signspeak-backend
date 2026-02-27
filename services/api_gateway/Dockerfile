@@ -5,12 +5,17 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+# Non-root user required by Hugging Face Spaces
+RUN adduser --disabled-password --gecos "" appuser
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
 
-EXPOSE 8000
+RUN chown -R appuser:appuser /app
+USER appuser
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 7860
 
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "7860"]
