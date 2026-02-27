@@ -17,7 +17,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 # Import the FastAPI app from api.main
-from api.main import app
+from api.main import app  # noqa: E402
 
 # Re-export for uvicorn
 __all__ = ["app"]

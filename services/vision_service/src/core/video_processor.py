@@ -22,25 +22,6 @@ class VideoProcessor:
             min_tracking_confidence=0.1,
         )
 
-    # ... (skipping methods) ...
-
-    def process_image(self, image_bytes: bytes) -> np.ndarray | None:
-        """Process a single image and extract holistic features."""
-        # Decode bytes to numpy array
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if frame is None:
-            raise ValueError("Could not decode image")
-
-        # Convert to RGB (MediaPipe requirement)
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        # Extract using the static mode extractor
-        features = self.image_extractor.extract(frame_rgb)
-
-        return features
-
     def process_video_bytes(
         self, video_bytes: bytes, target_frames: int = 30
     ) -> np.ndarray:

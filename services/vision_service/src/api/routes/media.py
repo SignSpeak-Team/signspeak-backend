@@ -165,7 +165,7 @@ async def translate_video(
         import logging
 
         logging.error(f"Error processing video: {str(e)}")
-        raise HTTPException(500, f"Error processing video: {str(e)}")
+        raise HTTPException(500, f"Error processing video: {str(e)}") from e
 
 
 @router.post("/translate/image", response_model=VideoTranslationResponse)
@@ -227,4 +227,4 @@ async def translate_image(
     except HTTPException as he:
         raise he
     except Exception as e:
-        raise HTTPException(500, f"Image processing failed: {str(e)}")
+        raise HTTPException(500, f"Image processing failed: {str(e)}") from e
