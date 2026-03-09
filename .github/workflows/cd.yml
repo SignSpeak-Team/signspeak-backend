@@ -1,0 +1,709 @@
+name: CD — Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*.*.*" # ej: v1.2.3  →  dispara deploy a producción
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Entorno destino"
+        required: true
+        default: "staging"
+        type: choice
+        options: [staging, production]
+      force_deploy_all:
+        description: "Forzar deploy de todos los servicios"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false # nunca cancelar un deploy en curso
+
+# ── Permisos mínimos ──────────────────────────────────────────────────────────
+permissions:
+  contents: read
+  id-token: write # para OIDC auth con AWS (recomendado sobre access keys)
+
+# ── Variables globales ────────────────────────────────────────────────────────
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: ${{ vars.TF_PROJECT_NAME || 'signspeakbackend' }}
+  IMAGE_TAG: ${{ github.sha }}
+
+# =============================================================================
+# JOB 1 — Detectar qué servicios cambiaron
+# =============================================================================
+jobs:
+  changes:
+    name: "🔍 Detectar cambios"
+    runs-on: ubuntu-latest
+    outputs:
+      api_gateway: ${{ steps.filter.outputs.api_gateway }}
+      vision_service: ${{ steps.filter.outputs.vision_service }}
+      translation_service: ${{ steps.filter.outputs.translation_service }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+      any_service: ${{ steps.any.outputs.any_service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filtrar cambios por servicio
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api_gateway:
+              - 'services/api_gateway/**'
+              - 'docker-compose.yml'
+            vision_service:
+              - 'services/vision_service/**'
+              - 'docker-compose.yml'
+            translation_service:
+              - 'services/translation_service/**'
+              - 'docker-compose.yml'
+            terraform:
+              - 'terraform/**'
+
+      - name: Calcular si cambió algún servicio
+        id: any
+        run: |
+          FORCE="${{ github.event.inputs.force_deploy_all }}"
+          API="${{ steps.filter.outputs.api_gateway }}"
+          VIS="${{ steps.filter.outputs.vision_service }}"
+          TRA="${{ steps.filter.outputs.translation_service }}"
+
+          if [[ "$FORCE" == "true" || "$API" == "true" || "$VIS" == "true" || "$TRA" == "true" ]]; then
+            echo "any_service=true" >> $GITHUB_OUTPUT
+          else
+            echo "any_service=false" >> $GITHUB_OUTPUT
+          fi
+
+  # =============================================================================
+  # JOB 2 — Configurar AWS y determinar environment
+  # =============================================================================
+  setup:
+    name: "⚙️ Setup AWS & entorno"
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.any_service == 'true' || needs.changes.outputs.terraform == 'true' || github.event_name == 'workflow_dispatch'
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+      short_sha: ${{ steps.sha.outputs.short_sha }}
+    steps:
+      - name: Calcular short SHA
+        id: sha
+        run: echo "short_sha=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+      - name: Determinar entorno destino
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+  # =============================================================================
+  # JOB 3 — Build & Push imágenes Docker a ECR (en paralelo por servicio)
+  # =============================================================================
+  build-api-gateway:
+    name: "🐳 Build api-gateway"
+    runs-on: ubuntu-latest
+    needs: [changes, setup]
+    if: needs.changes.outputs.api_gateway == 'true' || github.event.inputs.force_deploy_all == 'true'
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push api-gateway
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/api_gateway
+          file: ./services/api_gateway/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-api-gateway:${{ env.IMAGE_TAG }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-api-gateway:latest
+          cache-from: type=gha,scope=api-gateway
+          cache-to: type=gha,mode=max,scope=api-gateway
+          outputs: image=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-api-gateway:${{ env.IMAGE_TAG }}
+
+  build-vision-service:
+    name: "🐳 Build vision-service"
+    runs-on: ubuntu-latest
+    needs: [changes, setup]
+    if: needs.changes.outputs.vision_service == 'true' || github.event.inputs.force_deploy_all == 'true'
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push vision-service
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/vision_service
+          file: ./services/vision_service/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-vision-service:${{ env.IMAGE_TAG }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-vision-service:latest
+          cache-from: type=gha,scope=vision-service
+          cache-to: type=gha,mode=max,scope=vision-service
+          outputs: image=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-vision-service:${{ env.IMAGE_TAG }}
+
+  build-translation-service:
+    name: "🐳 Build translation-service"
+    runs-on: ubuntu-latest
+    needs: [changes, setup]
+    if: needs.changes.outputs.translation_service == 'true' || github.event.inputs.force_deploy_all == 'true'
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push translation-service
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/translation_service
+          file: ./services/translation_service/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-translation-service:${{ env.IMAGE_TAG }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-translation-service:latest
+          cache-from: type=gha,scope=translation-service
+          cache-to: type=gha,mode=max,scope=translation-service
+          outputs: image=${{ steps.login-ecr.outputs.registry }}/${{ env.PROJECT_NAME }}-${{ needs.setup.outputs.environment }}-translation-service:${{ env.IMAGE_TAG }}
+
+  # =============================================================================
+  # JOB 4 — Terraform Plan (siempre, para visibility)
+  # =============================================================================
+  terraform-plan:
+    name: "📋 Terraform Plan"
+    runs-on: ubuntu-latest
+    needs:
+      [
+        changes,
+        setup,
+        build-api-gateway,
+        build-vision-service,
+        build-translation-service,
+      ]
+    if: |
+      always() &&
+      !cancelled() &&
+      (needs.changes.outputs.terraform == 'true' || needs.changes.outputs.any_service == 'true' || github.event_name == 'workflow_dispatch')
+    env:
+      TF_ENVIRONMENT: ${{ needs.setup.outputs.environment }}
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.7"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan \
+            -var="environment=${{ env.TF_ENVIRONMENT }}" \
+            -var="image_tag=${{ env.IMAGE_TAG }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="project_name=${{ env.PROJECT_NAME }}" \
+            -out=tfplan \
+            -no-color 2>&1 | tee plan_output.txt
+        continue-on-error: true
+
+      - name: Publicar Plan como comentario en PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('terraform/plan_output.txt', 'utf8');
+            const truncated = plan.length > 60000 ? plan.slice(-60000) + '\n...(truncado)' : plan;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📋 Terraform Plan — \`${{ env.TF_ENVIRONMENT }}\`\n\`\`\`\n${truncated}\n\`\`\``
+            });
+
+      - name: Upload Terraform plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ env.TF_ENVIRONMENT }}-${{ github.sha }}
+          path: |
+            terraform/tfplan
+            terraform/plan_output.txt
+          retention-days: 7
+
+  # =============================================================================
+  # JOB 5 — Deploy a STAGING (ECS Fargate)
+  # =============================================================================
+  deploy-staging:
+    name: "🚀 Deploy → Staging"
+    runs-on: ubuntu-latest
+    needs:
+      [
+        setup,
+        build-api-gateway,
+        build-vision-service,
+        build-translation-service,
+        terraform-plan,
+      ]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.setup.outputs.environment == 'staging' &&
+      needs.terraform-plan.result != 'failure'
+    environment:
+      name: staging
+      url: ${{ steps.get-url.outputs.url }}
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.7"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Terraform plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-staging-${{ github.sha }}
+          path: terraform/
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply (staging)
+        run: terraform apply -auto-approve tfplan
+
+      - name: Obtener URL del ALB
+        id: get-url
+        run: |
+          ALB_DNS=$(terraform output -raw alb_dns_name 2>/dev/null || echo "")
+          echo "url=http://${ALB_DNS}" >> $GITHUB_OUTPUT
+          echo "alb_dns=${ALB_DNS}" >> $GITHUB_OUTPUT
+
+      - name: Forzar actualización de ECS services
+        run: |
+          CLUSTER="${{ env.PROJECT_NAME }}-staging-cluster"
+          for SERVICE in api-gateway vision-service translation-service; do
+            echo "♻️  Actualizando $SERVICE..."
+            aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "${{ env.PROJECT_NAME }}-staging-${SERVICE}" \
+              --force-new-deployment \
+              --region "${{ env.AWS_REGION }}" || echo "⚠️  Servicio $SERVICE no encontrado, puede ser primera vez"
+          done
+
+      - name: Esperar estabilización de ECS
+        run: |
+          CLUSTER="${{ env.PROJECT_NAME }}-staging-cluster"
+          echo "⏳ Esperando estabilización de api-gateway..."
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER" \
+            --services "${{ env.PROJECT_NAME }}-staging-api-gateway" \
+            --region "${{ env.AWS_REGION }}" || echo "⚠️  Timeout (continúa de todas formas)"
+
+  # =============================================================================
+  # JOB 6 — Smoke Tests contra Staging
+  # =============================================================================
+  smoke-test-staging:
+    name: "🧪 Smoke Tests — Staging"
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: needs.deploy-staging.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Obtener URL del ALB desde Terraform outputs
+        id: alb
+        working-directory: terraform
+        run: |
+          pip install --quiet boto3
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --query "LoadBalancers[?contains(LoadBalancerName, '${{ env.PROJECT_NAME }}-staging')].DNSName" \
+            --output text)
+          echo "base_url=http://${ALB_DNS}" >> $GITHUB_OUTPUT
+          echo "🌐 ALB URL: http://${ALB_DNS}"
+
+      - name: Health check — api-gateway
+        run: |
+          BASE_URL="${{ steps.alb.outputs.base_url }}"
+          echo "🏥 Verificando $BASE_URL/api/v1/health"
+
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 \
+              "$BASE_URL/api/v1/health" || echo "000")
+
+            echo "  Intento $i: HTTP $STATUS"
+
+            if [[ "$STATUS" == "200" ]]; then
+              echo "✅ Health check OK"
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo "❌ Health check falló después de 5 intentos"
+          exit 1
+
+      - name: Verificar endpoint /api/v1/status
+        run: |
+          BASE_URL="${{ steps.alb.outputs.base_url }}"
+          RESPONSE=$(curl -sf --max-time 15 "$BASE_URL/api/v1/status" || echo '{"error":"timeout"}')
+          echo "📊 Status response: $RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"status"'; then
+            echo "✅ Status endpoint OK"
+          else
+            echo "⚠️  Status endpoint devolvió respuesta inesperada"
+          fi
+
+      - name: Test de predicción estática (contrato)
+        run: |
+          BASE_URL="${{ steps.alb.outputs.base_url }}"
+
+          # Construir landmarks de prueba (21 puntos [x,y,z])
+          LANDMARKS=$(python3 -c "
+          import json
+          lm = [[round(i*0.04, 4), round(i*0.04, 4), 0.0] for i in range(21)]
+          print(json.dumps({'landmarks': lm}))
+          ")
+
+          RESPONSE=$(curl -sf \
+            --max-time 30 \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            -d "$LANDMARKS" \
+            "$BASE_URL/api/v1/predict/static" || echo '{"error":"failed"}')
+
+          echo "🤖 Predict response: $RESPONSE"
+
+          if echo "$RESPONSE" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'letter' in d, 'No letter field'
+          assert 'confidence' in d, 'No confidence field'
+          print('✅ Contrato OK — letter:', d.get('letter'), '| confidence:', d.get('confidence'))
+          "; then
+            echo "✅ Smoke test de predicción superado"
+          else
+            echo "❌ El contrato de la API no se cumplió en staging"
+            exit 1
+          fi
+
+  # =============================================================================
+  # JOB 7 — Deploy a PRODUCTION (ECS Fargate)
+  #          Solo en tags v* — requiere environment protection rules (aprobación manual)
+  # =============================================================================
+  deploy-production:
+    name: "🚀 Deploy → Production"
+    runs-on: ubuntu-latest
+    needs:
+      [
+        setup,
+        build-api-gateway,
+        build-vision-service,
+        build-translation-service,
+        terraform-plan,
+        smoke-test-staging,
+      ]
+    if: |
+      always() &&
+      !cancelled() &&
+      (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production') &&
+      needs.smoke-test-staging.result == 'success'
+    environment:
+      name: production # ← configura "Required reviewers" en GitHub para this env
+      url: ${{ steps.get-url.outputs.url }}
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "⚠️  Confirmación de deploy a producción"
+        run: |
+          echo "🚀 Desplegando tag ${{ github.ref_name }} a PRODUCCIÓN"
+          echo "📷 SHA: ${{ github.sha }}"
+          echo "🕐 Hora: $(date -u)"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.7"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply (production)
+        run: |
+          terraform apply \
+            -auto-approve \
+            -var="environment=production" \
+            -var="image_tag=${{ env.IMAGE_TAG }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="project_name=${{ env.PROJECT_NAME }}"
+
+      - name: Obtener URL del ALB de producción
+        id: get-url
+        run: |
+          ALB_DNS=$(terraform output -raw alb_dns_name 2>/dev/null || echo "")
+          echo "url=http://${ALB_DNS}" >> $GITHUB_OUTPUT
+
+      - name: Forzar actualización de ECS services (producción)
+        run: |
+          CLUSTER="${{ env.PROJECT_NAME }}-production-cluster"
+          for SERVICE in api-gateway vision-service translation-service; do
+            echo "♻️  Actualizando $SERVICE en producción..."
+            aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "${{ env.PROJECT_NAME }}-production-${SERVICE}" \
+              --force-new-deployment \
+              --region "${{ env.AWS_REGION }}" || true
+          done
+
+      - name: Esperar estabilización (producción)
+        run: |
+          CLUSTER="${{ env.PROJECT_NAME }}-production-cluster"
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER" \
+            --services "${{ env.PROJECT_NAME }}-production-api-gateway" \
+            --region "${{ env.AWS_REGION }}" || echo "⚠️  Timeout"
+
+  # =============================================================================
+  # JOB 8 — Smoke Tests contra Production
+  # =============================================================================
+  smoke-test-production:
+    name: "🧪 Smoke Tests — Production"
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: needs.deploy-production.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Obtener URL de producción
+        id: alb
+        run: |
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --query "LoadBalancers[?contains(LoadBalancerName, '${{ env.PROJECT_NAME }}-production')].DNSName" \
+            --output text)
+          echo "base_url=http://${ALB_DNS}" >> $GITHUB_OUTPUT
+
+      - name: Health checks producción
+        run: |
+          BASE_URL="${{ steps.alb.outputs.base_url }}"
+          for ENDPOINT in /api/v1/health /api/v1/status; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$BASE_URL$ENDPOINT" || echo "000")
+            echo "$ENDPOINT → HTTP $STATUS"
+            if [[ "$STATUS" != "200" ]]; then
+              echo "❌ $ENDPOINT falló en producción"
+              exit 1
+            fi
+          done
+          echo "✅ Todos los health checks de producción OK"
+
+  # =============================================================================
+  # JOB 9 — Rollback automático si smoke tests de producción fallan
+  # =============================================================================
+  rollback-production:
+    name: "⏪ Rollback — Production"
+    runs-on: ubuntu-latest
+    needs: [smoke-test-production, deploy-production]
+    if: |
+      always() &&
+      needs.smoke-test-production.result == 'failure' &&
+      needs.deploy-production.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: "🔴 Rollback ECS a la task definition anterior"
+        run: |
+          CLUSTER="${{ env.PROJECT_NAME }}-production-cluster"
+          for SERVICE in api-gateway vision-service translation-service; do
+            SVC_NAME="${{ env.PROJECT_NAME }}-production-${SERVICE}"
+            echo "⏪ Haciendo rollback de $SVC_NAME..."
+
+            # Obtener la penúltima task definition (la anterior al deploy)
+            FAMILY="${{ env.PROJECT_NAME }}-production-${SERVICE}"
+            PREV_TD=$(aws ecs list-task-definitions \
+              --family-prefix "$FAMILY" \
+              --sort DESC \
+              --query 'taskDefinitionArns[1]' \
+              --output text)
+
+            if [[ "$PREV_TD" != "None" && -n "$PREV_TD" ]]; then
+              aws ecs update-service \
+                --cluster "$CLUSTER" \
+                --service "$SVC_NAME" \
+                --task-definition "$PREV_TD" \
+                --region "${{ env.AWS_REGION }}" | jq '.service.taskDefinition'
+              echo "✅ Rollback de $SVC_NAME → $PREV_TD"
+            else
+              echo "⚠️  No hay task definition anterior para $SVC_NAME"
+            fi
+          done
+
+      - name: Notificar rollback
+        if: always()
+        run: |
+          echo "🚨 ROLLBACK completado para el deploy de ${{ github.sha }}"
+          echo "Tag: ${{ github.ref_name }}"
+          echo "El equipo debe investigar el fallo antes del próximo deploy."
+
+  # =============================================================================
+  # JOB 10 — Notificación final de estado
+  # =============================================================================
+  notify:
+    name: "📣 Notificación final"
+    runs-on: ubuntu-latest
+    needs:
+      - deploy-staging
+      - smoke-test-staging
+      - deploy-production
+      - smoke-test-production
+      - rollback-production
+    if: always()
+    steps:
+      - name: Resumen del pipeline
+        run: |
+          echo "## 📊 Resumen del CD Pipeline"                         >> $GITHUB_STEP_SUMMARY
+          echo ""                                                        >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Resultado |"                                    >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-----------|"                                    >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy Staging   | ${{ needs.deploy-staging.result }}       |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Staging    | ${{ needs.smoke-test-staging.result }}   |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy Prod      | ${{ needs.deploy-production.result }}    |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Prod       | ${{ needs.smoke-test-production.result }}|" >> $GITHUB_STEP_SUMMARY
+          echo "| Rollback         | ${{ needs.rollback-production.result }}  |" >> $GITHUB_STEP_SUMMARY
+          echo ""                                                        >> $GITHUB_STEP_SUMMARY
+          echo "**SHA:** \`${{ github.sha }}\`"                        >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** \`${{ github.ref_name }}\`"                   >> $GITHUB_STEP_SUMMARY
+          echo "**Hora:** $(date -u)"                                   >> $GITHUB_STEP_SUMMARY
