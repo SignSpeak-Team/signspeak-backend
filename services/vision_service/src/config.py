@@ -9,9 +9,10 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 # Cargar .env desde la raíz si existe
 try:
     from dotenv import load_dotenv
+
     load_dotenv(ROOT_DIR / ".env")
 except ImportError:
-    pass  # python-dotenv opcional
+    pass
 
 # === Paths ===
 BASE_DIR = Path(__file__).parent.parent
