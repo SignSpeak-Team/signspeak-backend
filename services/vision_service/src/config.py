@@ -1,6 +1,17 @@
 """Vision Service Configuration."""
 
+import os
 from pathlib import Path
+
+# Raíz del proyecto (4 niveles arriba de src/config.py)
+ROOT_DIR = Path(__file__).resolve().parents[3]
+
+# Cargar .env desde la raíz si existe
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT_DIR / ".env")
+except ImportError:
+    pass  # python-dotenv opcional
 
 # === Paths ===
 BASE_DIR = Path(__file__).parent.parent
@@ -34,12 +45,12 @@ HOLISTIC_SEQUENCE_LENGTH = 30  # Frames for holistic
 HOLISTIC_NUM_FEATURES = 226  # Pose + both hands
 
 # === Detection Thresholds ===
-MOVEMENT_THRESHOLD = 0.15
+MOVEMENT_THRESHOLD: float = float(os.getenv("MOVEMENT_THRESHOLD", "0.15"))
 RECENT_MOVEMENT_THRESHOLD = 0.02
 RECENT_FRAMES_COUNT = 5
 
 # === Confidence ===
-HIGH_CONFIDENCE_THRESHOLD = 80
+HIGH_CONFIDENCE_THRESHOLD: int = int(os.getenv("HIGH_CONFIDENCE_THRESHOLD", "80"))
 MEDIUM_CONFIDENCE_THRESHOLD = 60
 
 # === Cooldowns (frames) ===
@@ -50,7 +61,7 @@ PREDICTION_INTERVAL = 3
 # === Continuous Detection ===
 DEFAULT_WINDOW_SIZE_SEC = 2.0  # Optimal for sign language (1-1.5s per sign)
 DEFAULT_STRIDE_SEC = 0.75  # 50% overlap for better transition detection
-MIN_WINDOW_CONFIDENCE = 60.0  # Filter weak predictions
+MIN_WINDOW_CONFIDENCE: float = float(os.getenv("MIN_WINDOW_CONFIDENCE", "60.0"))
 DUPLICATE_TIME_THRESHOLD = 1.5  # Seconds to consider temporal duplicate
 MIN_WINDOW_FILL_RATIO = 0.75  # Minimum 75% of window must have frames
 

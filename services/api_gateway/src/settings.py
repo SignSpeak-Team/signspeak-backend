@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     SERVICE_NAME: str = "API Gateway"
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     # Server — HF Spaces uses port 7860 by default
     API_GATEWAY_HOST: str = "0.0.0.0"
@@ -29,8 +30,8 @@ class Settings(BaseSettings):
     )
 
     # HTTP Client Configuration
-    HTTP_TIMEOUT: float = 30.0  # seconds
-    HTTP_CONNECT_TIMEOUT: float = 5.0  # seconds
+    HTTP_TIMEOUT: float = float(os.getenv("HTTP_TIMEOUT", "30"))
+    HTTP_CONNECT_TIMEOUT: float = float(os.getenv("HTTP_CONNECT_TIMEOUT", "5"))
 
     class Config:
         # Carga el .env desde la raíz del proyecto
