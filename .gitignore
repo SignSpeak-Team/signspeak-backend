@@ -19,7 +19,7 @@ venv/
 .env.local
 
 # ==================================
-# DATASETS Y DESARROLLO  
+# DATASETS Y DESARROLLO
 # ==================================
 # Datasets en dev/ (no para producción)
 services/vision_service/dev/datasets_raw/
@@ -62,3 +62,21 @@ temp/
 # ==================================
 docs/
 *.md.resolved
+
+# ==================================
+# TERRAFORM / IAC
+# ==================================
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfstate.d/
+terraform/*.tfplan
+terraform/tfplan
+terraform/terraform.tfvars       # ← contiene secretos, nunca commitear
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+terraform/crash.log
+terraform/.terraformrc

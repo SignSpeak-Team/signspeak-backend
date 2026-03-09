@@ -1,0 +1,33 @@
+# terraform.tfvars.example
+# Copia este archivo a terraform.tfvars y rellena tus valores reales.
+# ¡NUNCA commitees terraform.tfvars si contiene secretos!
+
+project_name = "signspeakbackend"
+environment  = "dev"
+aws_region   = "us-east-1"
+
+# Red
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+public_subnets     = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnets    = ["10.0.11.0/24", "10.0.12.0/24"]
+
+# Imagen a desplegar (pon el SHA corto del commit en CI/CD)
+image_tag = "latest"
+
+# TLS: pega el ARN de tu certificado ACM, o deja "" para solo HTTP
+certificate_arn = ""
+domain_name     = ""   # ej: "signspeakapp.com"
+
+# Recursos ECS — ajusta según carga esperada
+api_gateway_cpu    = 256
+api_gateway_memory = 512
+
+vision_service_cpu    = 1024
+vision_service_memory = 2048   # mínimo 2048 por MediaPipe/OpenCV
+
+translation_cpu    = 256
+translation_memory = 512
+
+# CloudWatch
+log_retention_days = 14
