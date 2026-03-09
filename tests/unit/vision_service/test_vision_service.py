@@ -12,7 +12,9 @@ def test_health_endpoint(vision_client):
 
 @pytest.mark.slow
 def test_predict_static_success(vision_client, mock_landmarks):
-    response = vision_client.post("/api/v1/predict/static", json={"landmarks": mock_landmarks})
+    response = vision_client.post(
+        "/api/v1/predict/static", json={"landmarks": mock_landmarks}
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -24,7 +26,9 @@ def test_predict_static_success(vision_client, mock_landmarks):
 
 @pytest.mark.slow
 def test_predict_static_invalid_landmarks(vision_client):
-    response = vision_client.post("/api/v1/predict/static", json={"landmarks": [[1, 2]]})
+    response = vision_client.post(
+        "/api/v1/predict/static", json={"landmarks": [[1, 2]]}
+    )
     assert response.status_code == 422
 
 
@@ -36,7 +40,9 @@ def mock_sequence():
 
 @pytest.mark.slow
 def test_predict_words_full_sequence(vision_client, mock_sequence):
-    response = vision_client.post("/api/v1/predict/words", json={"sequence": mock_sequence})
+    response = vision_client.post(
+        "/api/v1/predict/words", json={"sequence": mock_sequence}
+    )
 
     assert response.status_code == 200
     data = response.json()

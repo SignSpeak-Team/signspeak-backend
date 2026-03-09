@@ -104,7 +104,9 @@ class TestHolisticPredictionAPI:
     def mock_holistic_landmarks(self):
         return [0.5] * 226
 
-    def test_predict_holistic_valid_landmarks(self, vision_client, mock_holistic_landmarks):
+    def test_predict_holistic_valid_landmarks(
+        self, vision_client, mock_holistic_landmarks
+    ):
         response = vision_client.post(
             "/api/v1/predict/holistic", json={"landmarks": mock_holistic_landmarks}
         )
