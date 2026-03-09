@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     API_GATEWAY_HOST: str = "0.0.0.0"
     API_GATEWAY_PORT: int = int(os.getenv("PORT", "7860"))
 
-    # CORS - Configure for your React app domain in production
-    CORS_ORIGINS: list[str] = ["*"]
+    # CORS — comma-separated in .env, e.g. https://app.vercel.app,https://other.com
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")
 
     # Downstream services - Lee de env vars en producción
     TRANSLATION_SERVICE_URL: str = os.getenv(
@@ -34,9 +34,9 @@ class Settings(BaseSettings):
     HTTP_CONNECT_TIMEOUT: float = float(os.getenv("HTTP_CONNECT_TIMEOUT", "5"))
 
     class Config:
-        # Carga el .env desde la raíz del proyecto
         env_file = str(ROOT_DIR / ".env")
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()
