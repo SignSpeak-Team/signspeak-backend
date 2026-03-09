@@ -52,7 +52,7 @@ jobs:
           pip install -r services/api_gateway/requirements.txt
 
       - name: Run tests
-        run: pytest tests/unit/api_gateway/ -v --tb=short --cov=services/api_gateway/src --cov-report=xml
+        run: pytest tests/unit/api_gateway/ -v --tb=short --cov=services/api_gateway/src --cov-report=xml --cov-fail-under=70
         env:
           PYTHONPATH: ${{ github.workspace }}/services/api_gateway
 

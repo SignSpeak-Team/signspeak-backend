@@ -20,9 +20,7 @@ if str(VISION_SERVICE_PATH) not in sys.path:
 
 
 @pytest.fixture
-@pytest.mark.slow
 def vision_client():
-    """Cliente HTTP para Vision Service."""
     from api.main import app
 
     return TestClient(app)
