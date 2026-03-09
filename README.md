@@ -1,153 +1,78 @@
-# 🤟 SignSpeak - Traductor de Lenguaje de Señas Mexicano
+# 🤟 SignSpeak
 
-Sistema de traducción en tiempo real de Lenguaje de Señas Mexicano (LSM) a texto en español mediante visión por computadora y machine learning.
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-00897B?style=flat-square&logo=google&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)
+
+> Sistema de traducción en tiempo real de Lenguaje de Señas (LSM/LSE) a texto en español, usando visión por computadora y modelos de deep learning (MSG3D + MediaPipe).
 
 ---
 
-## 📖 Descripción
+## 🛠️ Stack
 
-SignSpeak utiliza MediaPipe para detección de manos y TensorFlow para clasificación de señas, implementado con arquitectura de microservicios para escalabilidad y mantenibilidad.
-
-## 🏗️ Arquitectura
-
-**4 Microservicios principales:**
-
-- **API Gateway** (8000): Punto de entrada, autenticación, rate limiting
-- **Translation Service** (8001): Orquestación de traducciones
-- **ML Service** (8002): Detección y clasificación de señas
-- **Storage Service** (8003): Gestión de archivos multimedia
-
-**Infraestructura:**
-
-- PostgreSQL (metadata), MongoDB (métricas), MinIO (archivos)
-- RabbitMQ (comunicación asíncrona entre servicios)
-- Docker & Kubernetes (containerización y orquestación)
-
-## 🛠️ Stack Tecnológico
-
-**Backend:** FastAPI, Python 3.13, SQLAlchemy, Pydantic  
-**ML:** MediaPipe, TensorFlow/Keras  
-**Databases:** PostgreSQL, MongoDB  
-**Storage:** MinIO (S3-compatible)  
-**DevOps:** Docker, Kubernetes, GitHub Actions  
-**Monitoring:** Prometheus, Grafana
+| Capa            | Tecnología                                                                 |
+| --------------- | -------------------------------------------------------------------------- |
+| **Backend**     | FastAPI, Python 3.11, Uvicorn                                              |
+| **ML / Visión** | PyTorch, MSG3D, MediaPipe, OpenCV                                          |
+| **Modelos**     | Letras estáticas · Letras dinámicas · Palabras LSM (249) · Holístico (150) |
+| **DevOps**      | Docker, GitHub Actions                                                     |
+| **Deploy**      | Hugging Face Spaces · Vercel                                               |
 
 ---
 
 ## 🚀 Quick Start
 
-### Instalación
-
 ```bash
-# Clonar repositorio
 git clone https://github.com/alanctinaDev/signSpeak.git
 cd signSpeak
-
-# Configurar variables de entorno
-cp .env.example .env
-
-# Levantar servicios
-docker-compose up -d
-
-# Verificar estado
-docker-compose ps
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r services/vision_service/requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-### Endpoints principales
+**1. Vision Service** (puerto 8001)
 
+```powershell
+cd services\vision_service
+python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8001 --reload
 ```
-API Documentation:  http://localhost:8000/docs
-Translation API:    http://localhost:8001/docs
-ML Service:         http://localhost:8002/docs
-Storage Service:    http://localhost:8003/docs
-RabbitMQ UI:        http://localhost:15672
-MinIO Console:      http://localhost:9001
+
+**2. API Gateway** (puerto 8000)
+
+```powershell
+cd services\api_gateway
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+Documentación interactiva: http://localhost:8000/docs
 
 ---
 
-## 📦 Comandos Útiles
+## 📡 Endpoints
 
-### Docker
-
-```bash
-# Ver logs de un servicio
-docker-compose logs -f <service-name>
-
-# Rebuild servicio específico
-docker-compose up -d --build <service-name>
-
-# Detener servicios
-docker-compose down
-
-# Limpiar todo (incluye volúmenes)
-docker-compose down -v
-```
-
-### Testing
-
-```bash
-# Ejecutar tests
-pytest
-
-# Con coverage
-pytest --cov=src --cov-report=html
-```
-
-### Kubernetes (Producción)
-
-```bash
-# Deploy
-kubectl apply -f infrastructure/kubernetes/
-
-# Ver estado
-kubectl get pods -n signspeak
-
-# Logs
-kubectl logs -f <pod-name> -n signspeak
-```
+| Método | Endpoint                   | Descripción                   |
+| ------ | -------------------------- | ----------------------------- |
+| `POST` | `/api/v1/predict/static`   | Letra estática (21 landmarks) |
+| `POST` | `/api/v1/predict/dynamic`  | Letra dinámica (15 frames)    |
+| `POST` | `/api/v1/predict/words`    | Palabra LSM (249 vocab)       |
+| `POST` | `/api/v1/predict/holistic` | Palabra médica (150 vocab)    |
 
 ---
 
-## 📁 Estructura
+## 🧪 Tests
 
+```bash
+pytest tests/unit/
+pytest tests/integration/
 ```
-signSpeak/
-├── services/              # Microservicios
-│   ├── api-gateway/
-│   ├── translation-service/
-│   ├── ml-service/
-│   └── storage-service/
-├── shared/               # Código compartido
-├── infrastructure/       # Configs DevOps
-├── docs/                # Documentación
-└── docker-compose.yml   # Orquestación local
-```
-
----
-
-## 🔄 Flujo de Traducción
-
-1. Usuario envía video → API Gateway
-2. Gateway → Translation Service
-3. Translation Service → RabbitMQ (cola de procesamiento)
-4. ML Service procesa: detecta manos + clasifica señas
-5. Resultado → Translation Service → PostgreSQL
-6. Usuario obtiene traducción
 
 ---
 
 ## 👨‍💻 Autor
 
-**Alan Lopez Cetina**  
-GitHub: [@alanctinaDev](https://github.com/alanctinaDev)
+**Alan Lopez Cetina** — [@alanctinaDev](https://github.com/alanctinaDev)
 
----
-
-## 📝 Licencia
-
-MIT License - Ver [LICENSE](LICENSE) para detalles
-
----
-
-**⭐ Star este proyecto si te resulta útil**
+📄 MIT License
