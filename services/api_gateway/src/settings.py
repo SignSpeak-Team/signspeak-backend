@@ -14,9 +14,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    # Server — HF Spaces uses port 7860 by default
+    # Server — Cloud Run uses $PORT dynamically (default 8080)
     API_GATEWAY_HOST: str = "0.0.0.0"
-    API_GATEWAY_PORT: int = int(os.getenv("PORT", "7860"))
+    API_GATEWAY_PORT: int = int(os.getenv("PORT", "8080"))
 
     # CORS — comma-separated in .env, e.g. https://app.vercel.app,https://other.com
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")

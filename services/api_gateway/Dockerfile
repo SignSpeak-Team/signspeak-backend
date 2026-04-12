@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Non-root user required by Hugging Face Spaces
+# Non-root user (buena práctica de seguridad)
 RUN adduser --disabled-password --gecos "" appuser
 
 COPY requirements.txt .
@@ -16,6 +16,7 @@ COPY src ./src
 RUN chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 7860
+EXPOSE 8080
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "7860"]
+# $PORT es inyectado por Cloud Run en runtime
+CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

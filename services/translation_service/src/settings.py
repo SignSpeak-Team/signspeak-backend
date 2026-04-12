@@ -1,21 +1,23 @@
-import os
 
-from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     # Service info
     SERVICE_NAME: str = "Translation Service"
     VERSION: str = "1.0.0"
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    ENVIRONMENT: str = "development"
 
-    # Server
-    PORT: int = int(os.getenv("PORT", "8001"))
+    # Server — Cloud Run usa $PORT dinámicamente
+    PORT: int = 8080
 
-    # Downstream services
-    VISION_SERVICE_URL: str = os.getenv(
-        "VISION_SERVICE_URL", "http://vision-service:8002"
-    )
+    # Downstream services — se inyectan como env vars en Cloud Run
+    VISION_SERVICE_URL: str = "http://vision-service:8080"
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()
