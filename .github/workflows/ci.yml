@@ -28,11 +28,19 @@ jobs:
       - name: Black
         run: black --check --diff .
 
-      - name: Pylint
+      - name: Pylint — api-gateway
         run: |
-          pylint services/api_gateway/src services/vision_service/src \
+          PYTHONPATH=services/api_gateway pylint services/api_gateway/src \
             --fail-under=7.0 \
-            --disable=C0114,C0115,C0116
+            --disable=C0114,C0115,C0116,E0401
+
+      - name: Pylint — vision-service
+        run: |
+          PYTHONPATH=services/vision_service/src pylint \
+            services/vision_service/src/api \
+            services/vision_service/src/core \
+            --fail-under=7.0 \
+            --disable=C0114,C0115,C0116,E0401
 
   # ============================================================================
   # JOB 2 — Test API Gateway
