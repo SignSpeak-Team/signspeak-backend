@@ -35,12 +35,15 @@ def client_with_mock():
 
 def test_translate_video_endpoint(client_with_mock):
     """Test /media/translate/video endpoint with mocked processor."""
-    # Create dummy video file content (not a real video, but bytes)
-    # The mock processor accepts any bytes
+    # Mock for continuous mode which is the default
+    mock_processor.process_video_sliding_window.return_value = [
+        {"start_time": 0, "end_time": 1, "features": np.zeros(226)}
+    ]
+    
     video_content = b"fake-video-content"
-
     response = client_with_mock.post(
         "/api/v1/media/translate/video",
+        data={"mode": "continuous"},
         files={"file": ("test.mp4", video_content, "video/mp4")},
     )
 
@@ -55,7 +58,7 @@ def test_translate_video_endpoint(client_with_mock):
     assert data["frames_processed"] == 30
 
     # Verify mock was called
-    mock_processor.process_video_bytes.assert_called_once()
+    mock_processor.process_video_sliding_window.assert_called_once()
 
 
 def test_translate_video_invalid_file_type(client_with_mock):
