@@ -23,9 +23,7 @@ python-multipart==0.0.21
 joblib==1.5.3
 protobuf==3.20.3
 sounddevice==0.5.5
-<<<<<<< HEAD
 prometheus-client==0.19.0
-=======
 
 # Para entrenar MSG3D
 torch>=2.0.0
@@ -35,4 +33,3 @@ pyyaml>=6.0
 tqdm>=4.65.0
 tensorboard>=2.13.0
 scipy>=1.10.0
->>>>>>> feature/holistic-model
