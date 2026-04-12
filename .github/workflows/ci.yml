@@ -1,12 +1,13 @@
 name: CI - Tests & Code Quality
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
     branches: [main, develop]
 
 jobs:
+  # ============================================================================
+  # JOB 1 — Code Quality (Ruff + Black + Pylint)
+  # ============================================================================
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest
@@ -22,18 +23,28 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Ruff
-        run: ruff check . --output-format=github
+        run: ruff check services/ tests/ --output-format=github
 
       - name: Black
-        run: black --check --diff .
+        run: black --check --diff services/ tests/
 
-      - name: Pylint
+      - name: Pylint — api-gateway
         run: |
-          pylint services/api_gateway/src services/vision_service/src \
+          PYTHONPATH=services/api_gateway pylint services/api_gateway/src \
             --fail-under=7.0 \
-            --disable=C0114,C0115,C0116 \
-            || true
+            --disable=C0114,C0115,C0116,E0401
 
+      - name: Pylint — vision-service
+        run: |
+          PYTHONPATH=services/vision_service/src pylint \
+            services/vision_service/src/api \
+            services/vision_service/src/core \
+            --fail-under=7.0 \
+            --disable=C0114,C0115,C0116,E0401
+
+  # ============================================================================
+  # JOB 2 — Test API Gateway
+  # ============================================================================
   test-api-gateway:
     name: Test API Gateway
     runs-on: ubuntu-latest
@@ -52,7 +63,11 @@ jobs:
           pip install -r services/api_gateway/requirements.txt
 
       - name: Run tests
-        run: pytest tests/unit/api_gateway/ -v --tb=short --cov=services/api_gateway/src --cov-report=xml --cov-fail-under=70
+        run: |
+          pytest tests/unit/api_gateway/ -v --tb=short \
+            --cov=services/api_gateway/src \
+            --cov-report=xml \
+            --cov-fail-under=70
         env:
           PYTHONPATH: ${{ github.workspace }}/services/api_gateway
 
@@ -63,6 +78,9 @@ jobs:
           path: coverage.xml
           retention-days: 7
 
+  # ============================================================================
+  # JOB 3 — Test Vision Service
+  # ============================================================================
   test-vision-service:
     name: Test Vision Service
     runs-on: ubuntu-latest
@@ -77,11 +95,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements-dev.txt numpy pytest pytest-asyncio
+          pip install -r requirements-dev.txt
           pip install -r services/vision_service/requirements.txt
 
       - name: Run tests
-        run: pytest tests/unit/vision_service/ -v --tb=short -m "not slow" --cov=services/vision_service/src --cov-report=xml
+        run: |
+          pytest tests/unit/vision_service/ -v --tb=short \
+            -m "not slow" \
+            --cov=services/vision_service/src \
+            --cov-report=xml
         env:
           PYTHONPATH: ${{ github.workspace }}/services/vision_service/src
 
@@ -92,6 +114,9 @@ jobs:
           path: coverage.xml
           retention-days: 7
 
+  # ============================================================================
+  # JOB 4 — Full Test Suite (integración completa)
+  # ============================================================================
   test-all:
     name: Full Test Suite
     runs-on: ubuntu-latest
@@ -104,7 +129,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install all dependencies
         run: |
           pip install -r requirements-dev.txt
           pip install -r services/api_gateway/requirements.txt
@@ -113,7 +138,9 @@ jobs:
       - name: Run all tests with coverage
         run: |
           pytest tests/ -v \
-            --cov=services --cov-report=xml --cov-report=term-missing
+            --cov=services \
+            --cov-report=xml \
+            --cov-report=term-missing
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

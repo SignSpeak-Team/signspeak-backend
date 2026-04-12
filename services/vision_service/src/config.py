@@ -14,11 +14,22 @@ try:
 except ImportError:
     pass
 
-# === Paths ===
-BASE_DIR = Path(__file__).parent.parent
-MODELS_DIR = BASE_DIR / "models"
+# === Hugging Face Hub ===
+# Repo donde viven los modelos: alanctinaDev/signspeak-models
+HF_MODEL_REPO: str = os.getenv("HF_MODEL_REPO", "alanctinaDev/signspeak-models")
+HF_TOKEN: str | None = os.getenv("HF_TOKEN", None)  # None = repo público
 
-# === Model Paths ===
+# === Paths ===
+# En Cloud Run los modelos se descargan desde HF Hub al directorio de caché.
+# En local, si existe la carpeta models/ se usa directamente (sin descarga).
+_LOCAL_MODELS_DIR = Path(__file__).parent.parent / "models"
+BASE_DIR = Path(__file__).parent.parent
+
+# MODELS_DIR se resuelve en runtime por el predictor (ver predictor.py)
+# para soportar tanto local (models/) como Cloud Run (HF cache)
+MODELS_DIR = _LOCAL_MODELS_DIR
+
+# === Model Paths (relativas a MODELS_DIR) ===
 # Alphabet - Static (21 letters)
 SIGN_MODEL_PATH = MODELS_DIR / "sign_model.keras"
 LABEL_ENCODER_PATH = MODELS_DIR / "label_encoder.pkl"
