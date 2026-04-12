@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
@@ -68,7 +69,7 @@ async def lifespan(app: FastAPI):
     print("API ready!")
     print("Docs: http://localhost:8000/docs")
     print("=" * 60)
-    
+
     yield
-    
+
     print("SignSpeak Vision API - Shutting down")

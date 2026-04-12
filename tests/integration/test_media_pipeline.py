@@ -39,7 +39,7 @@ def test_translate_video_endpoint(client_with_mock):
     mock_processor.process_video_sliding_window.return_value = [
         {"start_time": 0, "end_time": 1, "features": np.zeros(226)}
     ]
-    
+
     video_content = b"fake-video-content"
     response = client_with_mock.post(
         "/api/v1/media/translate/video",
