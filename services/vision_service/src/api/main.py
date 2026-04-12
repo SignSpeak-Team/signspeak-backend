@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
@@ -46,9 +48,9 @@ async def root():
     }
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Evento al iniciar la aplicación"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Evento de ciclo de vida de la aplicación."""
     print("=" * 60)
     print("SignSpeak Vision API - Starting")
     print("=" * 60)
@@ -68,8 +70,6 @@ async def startup_event():
     print("Docs: http://localhost:8000/docs")
     print("=" * 60)
 
+    yield
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Evento al cerrar la aplicación"""
     print("SignSpeak Vision API - Shutting down")

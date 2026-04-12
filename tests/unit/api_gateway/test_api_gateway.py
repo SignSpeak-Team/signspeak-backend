@@ -165,8 +165,11 @@ class TestBufferManagementEndpoints:
     def test_get_buffer_stats(self, gateway_client, mock_vision_client):
         """Obtener estadísticas del buffer."""
         mock_vision_client["get_word_buffer_stats"].return_value = {
-            "buffer_size": 10,
-            "phrase_length": 3,
+            "total_received": 15,
+            "total_accepted": 3,
+            "rejected_by_cooldown": 5,
+            "rejected_by_confidence": 7,
+            "acceptance_rate": 20.0,
             "current_phrase": "hola mundo adios",
         }
 
@@ -174,8 +177,8 @@ class TestBufferManagementEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["buffer_size"] == 10
-        assert data["phrase_length"] == 3
+        assert data["total_received"] == 15
+        assert data["total_accepted"] == 3
 
     def test_clear_word_buffer(self, gateway_client, mock_vision_client):
         """Limpiar buffer de palabras."""
