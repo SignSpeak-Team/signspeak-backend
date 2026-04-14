@@ -3,16 +3,15 @@
 import os
 from pathlib import Path
 
-# Raíz del proyecto (4 niveles arriba de src/config.py)
-ROOT_DIR = Path(__file__).resolve().parents[3]
-
-# Cargar .env desde la raíz si existe
+# Resolver de forma segura sin crashear en Docker (donde la jerarquía es menor)
 try:
+    ROOT_DIR = Path(__file__).resolve().parents[3]
     from dotenv import load_dotenv
-
     load_dotenv(ROOT_DIR / ".env")
-except ImportError:
+except Exception:
+    # En producción (Docker) no necesitamos el .env, usa las variables inyectadas
     pass
+
 
 # === Hugging Face Hub ===
 # Repo donde viven los modelos: alanctinaDev/signspeak-models
