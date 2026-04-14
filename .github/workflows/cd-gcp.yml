@@ -122,6 +122,7 @@ jobs:
             ENVIRONMENT=production
             LOG_LEVEL=INFO
           flags: |
+            --port=8080
             --memory=2Gi
             --cpu=2
             --timeout=300
