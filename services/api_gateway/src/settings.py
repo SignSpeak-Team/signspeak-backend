@@ -3,8 +3,11 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-# Raíz del proyecto (3 niveles arriba de src/settings.py)
-ROOT_DIR = Path(__file__).resolve().parents[3]
+# Resolver de forma segura sin crashear en Docker
+try:
+    ROOT_DIR = Path(__file__).resolve().parents[3]
+except IndexError:
+    ROOT_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
