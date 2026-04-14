@@ -7,6 +7,7 @@ from pathlib import Path
 try:
     ROOT_DIR = Path(__file__).resolve().parents[3]
     from dotenv import load_dotenv
+
     load_dotenv(ROOT_DIR / ".env")
 except Exception:
     # En producción (Docker) no necesitamos el .env, usa las variables inyectadas
