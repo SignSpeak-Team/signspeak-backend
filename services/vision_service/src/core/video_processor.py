@@ -1,10 +1,12 @@
 """Video Processing Pipeline."""
+
 import tempfile
 from pathlib import Path
 
 import cv2
 import numpy as np
 from config import HOLISTIC_NUM_FEATURES
+
 from core.holistic_extractor import HolisticExtractor
 
 
@@ -17,27 +19,8 @@ class VideoProcessor:
         self.image_extractor = HolisticExtractor(
             static_image_mode=True,
             min_detection_confidence=0.1,  # Very sensitive for static images
-            min_tracking_confidence=0.1
+            min_tracking_confidence=0.1,
         )
-
-    # ... (skipping methods) ...
-
-    def process_image(self, image_bytes: bytes) -> np.ndarray | None:
-        """Process a single image and extract holistic features."""
-        # Decode bytes to numpy array
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if frame is None:
-            raise ValueError("Could not decode image")
-
-        # Convert to RGB (MediaPipe requirement)
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        # Extract using the static mode extractor
-        features = self.image_extractor.extract(frame_rgb)
-
-        return features
 
     def process_video_bytes(
         self, video_bytes: bytes, target_frames: int = 30
@@ -71,20 +54,20 @@ class VideoProcessor:
             # For simplicity, if we read them all, uses them.
             # But let's stick to reading by index logic if total_frames is valid.
             if total_frames == 0:
-                 raise ValueError("Could not read video frames")
-        
+                raise ValueError("Could not read video frames")
+
         # Select indices uniformly
         if total_frames <= target_frames:
-             indices = np.arange(total_frames)
+            indices = np.arange(total_frames)
         else:
-             indices = np.linspace(0, total_frames - 1, target_frames, dtype=int)
+            indices = np.linspace(0, total_frames - 1, target_frames, dtype=int)
 
         frames_features = []
         current_idx = 0
 
         # Reset cap if we read it all (in fallback case) or just start from 0
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        
+
         while cap.isOpened() and len(frames_features) < target_frames:
             ret, frame = cap.read()
             if not ret:
@@ -132,7 +115,7 @@ class VideoProcessor:
             total_frames = len(all_features)
 
             if total_frames == 0 or fps <= 0:
-                 return []
+                return []
 
             segments = []
             window_frames = int(window_size_sec * fps)
@@ -141,7 +124,7 @@ class VideoProcessor:
             # 2. Apply sliding window over the PRE-CALCULATED features
             for start_frame in range(0, total_frames, stride_frames):
                 end_frame = min(start_frame + window_frames, total_frames)
-                
+
                 # Skip windows that are too short (less than 75% filled)
                 if (end_frame - start_frame) < (window_frames * 0.75):
                     continue
@@ -182,11 +165,11 @@ class VideoProcessor:
 
         # Extract using the static mode extractor
         features = self.image_extractor.extract(frame_rgb)
-        
+
         if features is None:
-             print("[DEBUG] Extractor returned None (No landmarks found)")
+            print("[DEBUG] Extractor returned None (No landmarks found)")
         else:
-             print(f"[DEBUG] Extractor returned features shape: {features.shape}")
+            print(f"[DEBUG] Extractor returned features shape: {features.shape}")
 
         return features
 
@@ -194,9 +177,9 @@ class VideoProcessor:
         """Read video strictly sequentially to keep MediaPipe happy."""
         cap = cv2.VideoCapture(str(video_path))
         fps = cap.get(cv2.CAP_PROP_FPS)
-        
+
         all_features = []
-        
+
         # Reset extractor for new video context (crucial for tracking)
         # self.extractor.reset() # If extractor supported it, otherwise we rely on continuity
 
@@ -207,29 +190,29 @@ class VideoProcessor:
 
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             features = self.extractor.extract(frame_rgb)
-            
+
             if features is None:
                 features = np.zeros(HOLISTIC_NUM_FEATURES, dtype=np.float32)
-            
+
             all_features.append(features)
 
         cap.release()
         return np.array(all_features, dtype=np.float32), fps
 
-    def _resample_sequence(self, sequence: np.ndarray, target_length: int) -> np.ndarray:
+    def _resample_sequence(
+        self, sequence: np.ndarray, target_length: int
+    ) -> np.ndarray:
         """Resample a sequence of N frames to `target_length` frames using uniform sampling."""
         current_length = len(sequence)
-        
+
         if current_length == target_length:
             return sequence
-            
+
         if current_length == 0:
-             return np.zeros((target_length, HOLISTIC_NUM_FEATURES), dtype=np.float32)
+            return np.zeros((target_length, HOLISTIC_NUM_FEATURES), dtype=np.float32)
 
         indices = np.linspace(0, current_length - 1, target_length, dtype=int)
         return sequence[indices]
-
-
 
     def close(self):
         self.extractor.close()

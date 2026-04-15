@@ -9,6 +9,7 @@ class StaticLandmarksRequest(BaseModel):
     landmarks: list[list[float]] = Field(
         ..., min_length=21, max_length=21, description="21 landmarks [x,y,z] each"
     )
+    handedness: str | None = Field(None, description="Handedness: 'Left' or 'Right'")
 
     @field_validator("landmarks")
     @classmethod
@@ -28,6 +29,7 @@ class TemporalSequenceRequest(BaseModel):
         max_length=15,
         description="15 frames, each with 21 landmarks",
     )
+    handedness: str | None = Field(None, description="Handedness: 'Left' or 'Right'")
 
     @field_validator("sequence")
     @classmethod
@@ -51,6 +53,7 @@ class HolisticRequest(BaseModel):
     landmarks: list[float] = Field(
         ..., min_length=226, max_length=226, description="226 holistic features"
     )
+
 
 # Aliases for backward compatibility
 LandmarksRequest = StaticLandmarksRequest

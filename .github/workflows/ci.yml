@@ -1,21 +1,20 @@
 name: CI - Tests & Code Quality
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
     branches: [main, develop]
 
 jobs:
+  # ============================================================================
+  # JOB 1 — Code Quality (Ruff + Black + Pylint)
+  # ============================================================================
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -23,22 +22,37 @@ jobs:
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Run ruff (linting)
-        run: ruff check . --output-format=github
+      - name: Ruff
+        run: ruff check services/ tests/ --output-format=github
 
-      - name: Run black (formatting check)
-        run: black --check --diff .
+      - name: Black
+        run: black --check --diff services/ tests/
 
+      - name: Pylint — api-gateway
+        run: |
+          PYTHONPATH=services/api_gateway pylint services/api_gateway/src \
+            --fail-under=7.0 \
+            --disable=C0114,C0115,C0116,E0401
+
+      - name: Pylint — vision-service
+        run: |
+          PYTHONPATH=services/vision_service/src pylint \
+            services/vision_service/src/api \
+            services/vision_service/src/core \
+            --fail-under=7.0 \
+            --disable=C0114,C0115,C0116,E0401
+
+  # ============================================================================
+  # JOB 2 — Test API Gateway
+  # ============================================================================
   test-api-gateway:
     name: Test API Gateway
     runs-on: ubuntu-latest
     needs: code-quality
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -48,21 +62,33 @@ jobs:
           pip install -r requirements-dev.txt
           pip install -r services/api_gateway/requirements.txt
 
-      - name: Run API Gateway tests
-        run: pytest tests/unit/api_gateway/ -v --tb=short
+      - name: Run tests
+        run: |
+          pytest tests/unit/api_gateway/ -v --tb=short \
+            --cov=services/api_gateway/src \
+            --cov-report=xml \
+            --cov-fail-under=70
         env:
           PYTHONPATH: ${{ github.workspace }}/services/api_gateway
 
-  test-translation-service:
-    name: Test Translation Service
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-api-gateway
+          path: coverage.xml
+          retention-days: 7
+
+  # ============================================================================
+  # JOB 3 — Test Vision Service
+  # ============================================================================
+  test-vision-service:
+    name: Test Vision Service
     runs-on: ubuntu-latest
     needs: code-quality
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -70,47 +96,35 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements-dev.txt
-          pip install -r services/translation_service/requirements.txt
+          pip install -r services/vision_service/requirements.txt
 
-      - name: Run Translation Service tests
-        run: pytest tests/unit/translation_service/ -v --tb=short
-        env:
-          PYTHONPATH: ${{ github.workspace }}/services/translation_service/src
-
-  test-vision-service:
-    name: Test Vision Service
-    runs-on: ubuntu-latest
-    needs: code-quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install lightweight dependencies
+      - name: Run tests
         run: |
-          pip install -r requirements-dev.txt
-          pip install numpy pytest pytest-asyncio
-
-      - name: Run Vision Service tests (non-slow)
-        run: pytest tests/unit/vision_service/ -v --tb=short -m "not slow"
+          pytest tests/unit/vision_service/ -v --tb=short \
+            -m "not slow" \
+            --cov=services/vision_service/src \
+            --cov-report=xml
         env:
           PYTHONPATH: ${{ github.workspace }}/services/vision_service/src
 
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-vision-service
+          path: coverage.xml
+          retention-days: 7
+
+  # ============================================================================
+  # JOB 4 — Full Test Suite (integración completa)
+  # ============================================================================
   test-all:
     name: Full Test Suite
     runs-on: ubuntu-latest
-    needs: [code-quality, test-vision-service, test-api-gateway, test-translation-service]
+    needs: [code-quality, test-api-gateway, test-vision-service]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -119,13 +133,14 @@ jobs:
         run: |
           pip install -r requirements-dev.txt
           pip install -r services/api_gateway/requirements.txt
-          pip install -r services/translation_service/requirements.txt
+          pip install -r services/vision_service/requirements.txt
 
-      - name: Run all non-slow tests with coverage
+      - name: Run all tests with coverage
         run: |
-          pytest tests/unit/api_gateway/ tests/unit/translation_service/ -v \
-            --cov=services --cov-report=xml --cov-report=term-missing
-        continue-on-error: true
+          pytest tests/ -v \
+            --cov=services \
+            --cov-report=xml \
+            --cov-report=term-missing
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

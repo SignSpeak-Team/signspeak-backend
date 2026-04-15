@@ -29,15 +29,17 @@ WORKDIR /app
 # Copiar requirements primero (para aprovechar cache de Docker)
 COPY requirements.txt .
 
-# Instalar dependencias de Python
+# Instalar PyTorch versión CPU explícitamente primero para evitar las librerías NVIDIA de 5GB
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Instalar el resto de dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar SOLO código de producción (NO dev/)
-COPY models/ /app/models/
+# Copiar SOLO código fuente (los modelos se descargan de HF Hub en runtime)
 COPY src/ /app/src/
 
-# Exponer puerto API
-EXPOSE 8000
+# Exponer puerto — Cloud Run inyecta $PORT dinámicamente
+EXPOSE 8080
 
-# Comando por defecto: ejecutar API REST
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# CMD usa $PORT de Cloud Run (default 8080 para desarrollo local)
+CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

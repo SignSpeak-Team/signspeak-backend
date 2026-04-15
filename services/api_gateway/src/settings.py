@@ -1,5 +1,13 @@
 import os
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+# Resolver de forma segura sin crashear en Docker
+try:
+    ROOT_DIR = Path(__file__).resolve().parents[3]
+except IndexError:
+    ROOT_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
@@ -7,31 +15,31 @@ class Settings(BaseSettings):
     SERVICE_NAME: str = "API Gateway"
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    # Server — HF Spaces uses port 7860 by default
+    # Server — Cloud Run uses $PORT dynamically (default 8080)
     API_GATEWAY_HOST: str = "0.0.0.0"
-    API_GATEWAY_PORT: int = int(os.getenv("PORT", "7860"))
+    API_GATEWAY_PORT: int = int(os.getenv("PORT", "8080"))
 
-    # CORS - Configure for your React app domain in production
-    CORS_ORIGINS: list[str] = ["*"]
+    # CORS — comma-separated in .env, e.g. https://app.vercel.app,https://other.com
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "*")
 
     # Downstream services - Lee de env vars en producción
     TRANSLATION_SERVICE_URL: str = os.getenv(
-        "TRANSLATION_SERVICE_URL", 
-        "http://translation-service:8001"
+        "TRANSLATION_SERVICE_URL", "http://translation-service:8001"
     )
     VISION_SERVICE_URL: str = os.getenv(
-        "VISION_SERVICE_URL",
-        "http://vision-service:8002"
+        "VISION_SERVICE_URL", "http://vision-service:8001"
     )
 
     # HTTP Client Configuration
-    HTTP_TIMEOUT: float = 30.0  # seconds
-    HTTP_CONNECT_TIMEOUT: float = 5.0  # seconds
+    HTTP_TIMEOUT: float = float(os.getenv("HTTP_TIMEOUT", "30"))
+    HTTP_CONNECT_TIMEOUT: float = float(os.getenv("HTTP_CONNECT_TIMEOUT", "5"))
 
     class Config:
-        env_file = ".env"
+        env_file = str(ROOT_DIR / ".env")
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

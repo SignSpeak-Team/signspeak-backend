@@ -1,12 +1,35 @@
 """Vision Service Configuration."""
 
+import os
 from pathlib import Path
 
-# === Paths ===
-BASE_DIR = Path(__file__).parent.parent
-MODELS_DIR = BASE_DIR / "models"
+# Resolver de forma segura sin crashear en Docker (donde la jerarquía es menor)
+try:
+    ROOT_DIR = Path(__file__).resolve().parents[3]
+    from dotenv import load_dotenv
 
-# === Model Paths ===
+    load_dotenv(ROOT_DIR / ".env")
+except Exception:
+    # En producción (Docker) no necesitamos el .env, usa las variables inyectadas
+    pass
+
+
+# === Hugging Face Hub ===
+# Repo donde viven los modelos: alanctinaDev/signspeak-models
+HF_MODEL_REPO: str = os.getenv("HF_MODEL_REPO", "alanctinaDev/signspeak-models")
+HF_TOKEN: str | None = os.getenv("HF_TOKEN", None)  # None = repo público
+
+# === Paths ===
+# En Cloud Run los modelos se descargan desde HF Hub al directorio de caché.
+# En local, si existe la carpeta models/ se usa directamente (sin descarga).
+_LOCAL_MODELS_DIR = Path(__file__).parent.parent / "models"
+BASE_DIR = Path(__file__).parent.parent
+
+# MODELS_DIR se resuelve en runtime por el predictor (ver predictor.py)
+# para soportar tanto local (models/) como Cloud Run (HF cache)
+MODELS_DIR = _LOCAL_MODELS_DIR
+
+# === Model Paths (relativas a MODELS_DIR) ===
 # Alphabet - Static (21 letters)
 SIGN_MODEL_PATH = MODELS_DIR / "sign_model.keras"
 LABEL_ENCODER_PATH = MODELS_DIR / "label_encoder.pkl"
@@ -34,12 +57,12 @@ HOLISTIC_SEQUENCE_LENGTH = 30  # Frames for holistic
 HOLISTIC_NUM_FEATURES = 226  # Pose + both hands
 
 # === Detection Thresholds ===
-MOVEMENT_THRESHOLD = 0.15
+MOVEMENT_THRESHOLD: float = float(os.getenv("MOVEMENT_THRESHOLD", "0.15"))
 RECENT_MOVEMENT_THRESHOLD = 0.02
 RECENT_FRAMES_COUNT = 5
 
 # === Confidence ===
-HIGH_CONFIDENCE_THRESHOLD = 80
+HIGH_CONFIDENCE_THRESHOLD: int = int(os.getenv("HIGH_CONFIDENCE_THRESHOLD", "80"))
 MEDIUM_CONFIDENCE_THRESHOLD = 60
 
 # === Cooldowns (frames) ===
@@ -50,7 +73,7 @@ PREDICTION_INTERVAL = 3
 # === Continuous Detection ===
 DEFAULT_WINDOW_SIZE_SEC = 2.0  # Optimal for sign language (1-1.5s per sign)
 DEFAULT_STRIDE_SEC = 0.75  # 50% overlap for better transition detection
-MIN_WINDOW_CONFIDENCE = 60.0  # Filter weak predictions
+MIN_WINDOW_CONFIDENCE: float = float(os.getenv("MIN_WINDOW_CONFIDENCE", "60.0"))
 DUPLICATE_TIME_THRESHOLD = 1.5  # Seconds to consider temporal duplicate
 MIN_WINDOW_FILL_RATIO = 0.75  # Minimum 75% of window must have frames
 
@@ -58,5 +81,5 @@ MIN_WINDOW_FILL_RATIO = 0.75  # Minimum 75% of window must have frames
 MSG3D_MODEL_PATH = MODELS_DIR / "msg3d_lse.pt"
 MSG3D_LABELS_PATH = MODELS_DIR / "msg3d_labels.pkl"
 MSG3D_NUM_FEATURES = 75  # Keypoints
-MSG3D_CHANNELS = 3      # x, y, z
+MSG3D_CHANNELS = 3  # x, y, z
 MSG3D_SEQUENCE_LENGTH = 64

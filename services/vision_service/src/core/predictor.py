@@ -3,29 +3,52 @@
 import pickle
 import time
 from collections import deque
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 from config import (
-    HOLISTIC_LABEL_ENCODER_PATH,
-    HOLISTIC_MODEL_PATH,
+    HF_MODEL_REPO,
+    HF_TOKEN,
     HOLISTIC_NUM_FEATURES,
     HOLISTIC_SEQUENCE_LENGTH,
-    LABEL_ENCODER_PATH,
-    LSTM_LABEL_ENCODER_PATH,
-    LSTM_MODEL_PATH,
+    MODELS_DIR,
     SEQUENCE_LENGTH,
-    SIGN_MODEL_PATH,
-    WORDS_LABEL_ENCODER_PATH,
-    WORDS_MODEL_PATH,
 )
-from core.metrics import PREDICTION_CONFIDENCE, PREDICTION_LATENCY, PREDICTIONS_TOTAL
 from tensorflow import keras
 from tensorflow.keras.layers import LSTM, BatchNormalization, Dense, Dropout, InputLayer
 from tensorflow.keras.models import Sequential
 
-from core.word_buffer import WordBuffer
+from core.metrics import PREDICTION_CONFIDENCE, PREDICTION_LATENCY, PREDICTIONS_TOTAL
 from core.msg3d_predictor import MSG3DPredictor
+from core.word_buffer import WordBuffer
+
+
+def _resolve_models_dir() -> Path:
+    """Return local models dir if it exists, otherwise download from HF Hub."""
+    if MODELS_DIR.exists() and any(MODELS_DIR.iterdir()):
+        print(f"[Predictor] Using local models from {MODELS_DIR}")
+        return MODELS_DIR
+
+    print(
+        f"[Predictor] Local models not found. Downloading from HF Hub: {HF_MODEL_REPO}"
+    )
+    try:
+        from huggingface_hub import snapshot_download
+
+        local_dir = snapshot_download(
+            repo_id=HF_MODEL_REPO,
+            token=HF_TOKEN,
+            repo_type="model",
+            local_dir=str(MODELS_DIR),
+        )
+        print(f"[Predictor] Models downloaded to {local_dir}")
+        return Path(local_dir)
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to download models from HF Hub '{HF_MODEL_REPO}': {e}. "
+            "Set HF_MODEL_REPO env var or provide a local models/ directory."
+        ) from e
 
 
 class SignPredictor:
@@ -33,9 +56,11 @@ class SignPredictor:
 
     def __init__(self):
         print("[Predictor] Loading models...")
+        # Resolve models dir: local fallback → HF Hub download
+        _resolved = _resolve_models_dir()
+        self._models_dir = _resolved
         self._load_static_model()
         self._load_dynamic_model()
-        self._load_words_model()
         self._load_words_model()
         self._load_holistic_model()
         self._load_msg3d_model()
@@ -47,32 +72,37 @@ class SignPredictor:
     def _load_static_model(self):
         """Load static alphabet model (21 letters)."""
         self.static_model = keras.models.load_model(
-            str(SIGN_MODEL_PATH), compile=False, safe_mode=False
+            str(self._models_dir / "sign_model.keras"), compile=False, safe_mode=False
         )
-        self.static_labels = self._load_encoder(LABEL_ENCODER_PATH)
+        self.static_labels = self._load_encoder(self._models_dir / "label_encoder.pkl")
         print(f"  ✓ Static: {len(self.static_labels)} letters")
 
     def _load_dynamic_model(self):
         """Load dynamic LSTM model (J, K, Q, X, Z, Ñ)."""
         self.lstm_model = keras.models.load_model(
-            str(LSTM_MODEL_PATH), compile=False, safe_mode=False
+            str(self._models_dir / "lstm_letters.keras"), compile=False, safe_mode=False
         )
-        self.lstm_labels = self._load_encoder(LSTM_LABEL_ENCODER_PATH)
+        self.lstm_labels = self._load_encoder(
+            self._models_dir / "lstm_label_encoder.pkl"
+        )
         print(f"  ✓ Dynamic: {len(self.lstm_labels)} letters")
 
     def _load_words_model(self):
         """Load words model (249 vocabulary)."""
         self.words_model = keras.models.load_model(
-            str(WORDS_MODEL_PATH), compile=False, safe_mode=False
+            str(self._models_dir / "words_model.keras"), compile=False, safe_mode=False
         )
-        self.words_labels = self._load_encoder(WORDS_LABEL_ENCODER_PATH)
+        self.words_labels = self._load_encoder(
+            self._models_dir / "words_label_encoder.pkl"
+        )
         print(f"  ✓ Words: {len(self.words_labels)} words")
 
     def _load_holistic_model(self):
         """Load holistic medical model (150 words)."""
+        holistic_path = self._models_dir / "best_model.h5"
         try:
             # Try loading as full model first (standard for .h5)
-            self.holistic_model = keras.models.load_model(str(HOLISTIC_MODEL_PATH))
+            self.holistic_model = keras.models.load_model(str(holistic_path))
         except Exception:
             # Fallback: Re-create architecture if file only contains weights
             print("  ! Holistic: Full load failed, rebuilding architecture...")
@@ -92,9 +122,11 @@ class SignPredictor:
                     Dense(150, activation="softmax"),
                 ]
             )
-            self.holistic_model.load_weights(str(HOLISTIC_MODEL_PATH))
+            self.holistic_model.load_weights(str(holistic_path))
 
-        self.holistic_labels = self._load_encoder(HOLISTIC_LABEL_ENCODER_PATH)
+        self.holistic_labels = self._load_encoder(
+            self._models_dir / "holistic_label_encoder.pkl"
+        )
         print(f"  ✓ Holistic: {len(self.holistic_labels)} medical words")
 
     def _load_msg3d_model(self):
@@ -126,9 +158,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='static').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='static', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='static').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="static").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="static", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="static").observe(conf)
 
         return {
             "letter": self.static_labels[idx],
@@ -148,9 +180,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='dynamic').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='dynamic', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='dynamic').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="dynamic").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="dynamic", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="dynamic").observe(conf)
 
         return {
             "letter": self.lstm_labels[idx],
@@ -175,9 +207,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='word').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='word', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='word').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="word").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="word", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="word").observe(conf)
 
         return {
             "word": self.words_labels.get(idx, "UNKNOWN"),
@@ -203,9 +235,9 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='holistic').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='holistic', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='holistic').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="holistic").observe(time.time() - start)
+        PREDICTIONS_TOTAL.labels(model_type="holistic", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="holistic").observe(conf)
 
         return {
             "word": self.holistic_labels.get(idx, "UNKNOWN"),
@@ -228,9 +260,11 @@ class SignPredictor:
         idx, conf = self._get_prediction(pred)
 
         # Record metrics
-        PREDICTION_LATENCY.labels(model_type='holistic_sequence').observe(time.time() - start)
-        PREDICTIONS_TOTAL.labels(model_type='holistic_sequence', status='success').inc()
-        PREDICTION_CONFIDENCE.labels(model_type='holistic_sequence').observe(conf)
+        PREDICTION_LATENCY.labels(model_type="holistic_sequence").observe(
+            time.time() - start
+        )
+        PREDICTIONS_TOTAL.labels(model_type="holistic_sequence", status="success").inc()
+        PREDICTION_CONFIDENCE.labels(model_type="holistic_sequence").observe(conf)
 
         return {
             "word": self.holistic_labels.get(idx, "UNKNOWN"),
@@ -250,16 +284,16 @@ class SignPredictor:
         # But let's require at least 15 frames to be meaningful.
         if len(self.lse_buffer) < 15:
             return None
-        
+
         # Pass sequence to MSG3D predictor
         sequence = np.array(list(self.lse_buffer))
         result = self.msg3d_predictor.predict(sequence)
-        
+
         return {
             "word": result["word"],
             "confidence": result["confidence"],
             "type": "lse_msg3d",
-            "processing_time_ms": result["processing_time_ms"]
+            "processing_time_ms": result["processing_time_ms"],
         }
 
     def predict_word_with_buffer(self, landmarks: np.ndarray) -> dict[str, Any] | None:
@@ -307,7 +341,7 @@ class SignPredictor:
         }
         for buf in buffers.get(buffer_type, []):
             buf.clear()
-        
+
         if buffer_type in ["lse", "all"]:
             self.lse_buffer.clear()
 

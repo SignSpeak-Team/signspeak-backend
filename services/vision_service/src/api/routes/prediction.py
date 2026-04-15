@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.models.request import (
     HolisticRequest,
+    LSERequest,
     StaticLandmarksRequest,
     TemporalSequenceRequest,
-    LSERequest,
 )
 from api.models.response import (
     BufferStatsResponse,
@@ -42,7 +42,36 @@ async def predict_static(
     - 17-20: PINKY
     """
     try:
-        landmarks = np.array(request.landmarks).flatten()
+        # Normalize relative to wrist (landmark 0)
+        raw_lms = request.landmarks
+        wrist = raw_lms[0]
+
+        # Calculate Hand Scale (Distance from wrist to middle finger base)
+        # mid_base = raw_lms[9]
+        # scale = sqrt((x9-x0)^2 + (y9-y0)^2 + (z9-z0)^2)
+        mid_base = raw_lms[9]
+        scale = np.sqrt(sum((mid_base[i] - wrist[i]) ** 2 for i in range(3)))
+        if scale < 1e-6:
+            scale = 1.0  # Safety
+
+        normalized = []
+
+        # Determine if we should flip X (mirroring fix)
+        # Based on user testing: Left hand works, Right hand fails.
+        # We flip if handedness is 'Left' to match the 'Right' hand orientation the model expects.
+        flip_x = request.handedness == "Left"
+
+        for lm in raw_lms:
+            dx = (lm[0] - wrist[0]) / scale
+            dy = (lm[1] - wrist[1]) / scale
+            dz = (lm[2] - wrist[2]) / scale
+
+            if flip_x:
+                dx = -dx
+
+            normalized.extend([dx, dy, dz])
+
+        landmarks = np.array(normalized)
         return PredictionResponse(**predictor.predict_static(landmarks))
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
@@ -54,10 +83,29 @@ async def predict_dynamic(
 ):
     """Predict dynamic letter (15 frames × 63 features)."""
     try:
-        sequence = np.array(
-            [[np.array(lm).flatten() for lm in frame] for frame in request.sequence]
-        )
-        sequence = sequence.reshape(15, 63)
+        # Normalize each frame relative to its own wrist
+        normalized_sequence = []
+        flip_x = request.handedness == "Left"
+
+        for frame in request.sequence:
+            wrist = frame[0]
+            mid_base = frame[9]
+            scale = np.sqrt(sum((mid_base[i] - wrist[i]) ** 2 for i in range(3)))
+            if scale < 1e-6:
+                scale = 1.0  # Safety
+
+            norm_frame = []
+            for lm in frame:
+                dx = (lm[0] - wrist[0]) / scale
+                dy = (lm[1] - wrist[1]) / scale
+                dz = (lm[2] - wrist[2]) / scale
+
+                if flip_x:
+                    dx = -dx
+                norm_frame.extend([dx, dy, dz])
+            normalized_sequence.append(norm_frame)
+
+        sequence = np.array(normalized_sequence).reshape(15, 63)
         return PredictionResponse(**predictor.predict_dynamic(sequence))
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
@@ -73,8 +121,27 @@ async def predict_words(
     """Predict word with buffer filtering (15 frames × 63 features)."""
     try:
         result = None
+        flip_x = request.handedness == "Left"
+
         for frame in request.sequence:
-            landmarks = np.array(frame).flatten()
+            # Normalize relative to wrist (landmark 0)
+            wrist = frame[0]
+            mid_base = frame[9]
+            scale = np.sqrt(sum((mid_base[i] - wrist[i]) ** 2 for i in range(3)))
+            if scale < 1e-6:
+                scale = 1.0  # Safety
+
+            norm_landmarks = []
+            for lm in frame:
+                dx = (lm[0] - wrist[0]) / scale
+                dy = (lm[1] - wrist[1]) / scale
+                dz = (lm[2] - wrist[2]) / scale
+
+                if flip_x:
+                    dx = -dx
+                norm_landmarks.extend([dx, dy, dz])
+
+            landmarks = np.array(norm_landmarks)
             result = predictor.predict_word_with_buffer(landmarks)
 
         if result is None:

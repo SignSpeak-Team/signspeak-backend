@@ -3,7 +3,6 @@ from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from src.routes import health, prediction, translate
 from src.settings import settings
 
@@ -36,7 +35,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,4 +45,3 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(translate.router)
 app.include_router(prediction.router)
-

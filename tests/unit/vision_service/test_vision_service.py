@@ -1,54 +1,48 @@
-"""Tests unitarios para Vision Service."""
+"""Tests unitarios para Vision Service API — solo validaciones, sin cargar modelos."""
 
 import pytest
 
 
+@pytest.mark.slow
 def test_health_endpoint(vision_client):
-    """Test que el endpoint de health funciona."""
     response = vision_client.get("/api/v1/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 
 
+@pytest.mark.slow
 def test_predict_static_success(vision_client, mock_landmarks):
-    """Test predicción de letra estática."""
-    payload = {"landmarks": mock_landmarks}  # 21 landmarks x 3 coords
-
-    response = vision_client.post("/api/v1/predict/static", json=payload)
+    response = vision_client.post(
+        "/api/v1/predict/static", json={"landmarks": mock_landmarks}
+    )
 
     assert response.status_code == 200
     data = response.json()
-    # Verificar estructura de respuesta real
     assert "letter" in data
     assert "confidence" in data
-    assert "type" in data
     assert data["type"] == "static"
     assert 0.0 <= data["confidence"] <= 100.0
 
 
+@pytest.mark.slow
 def test_predict_static_invalid_landmarks(vision_client):
-    """Test con landmarks inválidos."""
-    payload = {"landmarks": [[1, 2]]}  # Solo 1 landmark, se necesitan 21
-
-    response = vision_client.post("/api/v1/predict/static", json=payload)
-
-    # Pydantic valida min_length=21
-    assert response.status_code == 422  # Validation error
+    response = vision_client.post(
+        "/api/v1/predict/static", json={"landmarks": [[1, 2]]}
+    )
+    assert response.status_code == 422
 
 
 @pytest.fixture
 def mock_sequence():
-    """Genera una secuencia de 15 frames x 21 landmarks para testing."""
     landmarks = [[0.5, 0.5, 0.0] for _ in range(21)]
-    return [landmarks for _ in range(15)]  # 15 frames
+    return [landmarks for _ in range(15)]
 
 
 @pytest.mark.slow
 def test_predict_words_full_sequence(vision_client, mock_sequence):
-    """Test predicción de palabras con secuencia completa."""
-    payload = {"sequence": mock_sequence}  # 15 frames x 21 landmarks x 3 coords
-
-    response = vision_client.post("/api/v1/predict/words", json=payload)
+    response = vision_client.post(
+        "/api/v1/predict/words", json={"sequence": mock_sequence}
+    )
 
     assert response.status_code == 200
     data = response.json()

@@ -102,7 +102,9 @@ class SequenceProcessor:
             ):
                 # Merge: extend end time and take higher confidence
                 current["end_time"] = max(current["end_time"], next_seg["end_time"])
-                current["confidence"] = max(current["confidence"], next_seg["confidence"])
+                current["confidence"] = max(
+                    current["confidence"], next_seg["confidence"]
+                )
             else:
                 # Different word or too far apart - save current and start new
                 merged.append(current)
@@ -131,9 +133,11 @@ class SequenceProcessor:
             "filtered_words": filtered_words,
             "average_confidence": round(avg_confidence, 2),
             "filter_rate": round(
-                (1 - filtered_words / detected_before_filter) * 100
-                if detected_before_filter > 0
-                else 0,
+                (
+                    (1 - filtered_words / detected_before_filter) * 100
+                    if detected_before_filter > 0
+                    else 0
+                ),
                 2,
             ),
         }

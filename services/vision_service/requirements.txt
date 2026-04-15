@@ -1,6 +1,5 @@
 # Vision Service - SignSpeak
 # Python 3.11+ required
-# Install from root: pip install -r ../../../requirements.txt
 
 # Vision-specific dependencies
 opencv-contrib-python==4.11.0.86
@@ -23,16 +22,15 @@ python-multipart==0.0.21
 joblib==1.5.3
 protobuf==3.20.3
 sounddevice==0.5.5
-<<<<<<< HEAD
 prometheus-client==0.19.0
-=======
 
-# Para entrenar MSG3D
+# Hugging Face Hub — para descargar modelos en Cloud Run
+huggingface-hub>=0.23.0
+
+# Model training deps (MSG3D)
 torch>=2.0.0
 torchvision>=0.15.0
-numpy>=1.24.0
 pyyaml>=6.0
 tqdm>=4.65.0
 tensorboard>=2.13.0
 scipy>=1.10.0
->>>>>>> feature/holistic-model

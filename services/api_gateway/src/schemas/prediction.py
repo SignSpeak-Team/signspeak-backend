@@ -36,9 +36,7 @@ class SequenceRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "sequence": [
-                    [[0.5, 0.5, 0.0] for _ in range(21)] for _ in range(15)
-                ],
+                "sequence": [[[0.5, 0.5, 0.0] for _ in range(21)] for _ in range(15)],
             }
         }
 
@@ -96,6 +94,9 @@ class WordPredictionResponse(BaseModel):
 class BufferStatsResponse(BaseModel):
     """Response for buffer statistics."""
 
-    buffer_size: int = Field(..., description="Current buffer size")
-    phrase_length: int = Field(..., description="Current phrase word count")
+    total_received: int = Field(..., description="Total received predictions")
+    total_accepted: int = Field(..., description="Total accepted predictions")
+    rejected_by_cooldown: int = Field(..., description="Rejected by cooldown")
+    rejected_by_confidence: int = Field(..., description="Rejected by low confidence")
+    acceptance_rate: float = Field(..., description="Acceptance rate percentage")
     current_phrase: str = Field(..., description="Current accumulated phrase")

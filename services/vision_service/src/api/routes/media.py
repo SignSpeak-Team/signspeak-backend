@@ -3,12 +3,13 @@
 import time
 
 import numpy as np
-from api.models.response import DetectionStats, VideoSegment, VideoTranslationResponse
 from config import DEFAULT_STRIDE_SEC, DEFAULT_WINDOW_SIZE_SEC, MIN_WINDOW_CONFIDENCE
 from core.predictor import SignPredictor, get_predictor
 from core.sequence_processor import SequenceProcessor
 from core.video_processor import VideoProcessor
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+
+from api.models.response import DetectionStats, VideoSegment, VideoTranslationResponse
 
 router = APIRouter(prefix="/media", tags=["Media Processing"])
 
@@ -157,14 +158,14 @@ async def translate_video(
                 prediction_time_ms=round(prediction_time, 2),
                 total_time_ms=round(total_time, 2),
                 frames_processed=30,
-                segments=[]
+                segments=[],
             )
 
     except Exception as e:
         import logging
 
         logging.error(f"Error processing video: {str(e)}")
-        raise HTTPException(500, f"Error processing video: {str(e)}")
+        raise HTTPException(500, f"Error processing video: {str(e)}") from e
 
 
 @router.post("/translate/image", response_model=VideoTranslationResponse)
@@ -220,10 +221,10 @@ async def translate_image(
             prediction_time_ms=result["processing_time_ms"],
             total_time_ms=round((time.time() - start_time) * 1000, 2),
             frames_processed=1,
-            segments=[]
+            segments=[],
         )
 
     except HTTPException as he:
         raise he
     except Exception as e:
-        raise HTTPException(500, f"Image processing failed: {str(e)}")
+        raise HTTPException(500, f"Image processing failed: {str(e)}") from e

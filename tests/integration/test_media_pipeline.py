@@ -10,8 +10,8 @@ sys.path.append(str(VISION_SRC))
 
 import numpy as np
 import pytest
-from api.routes.media import get_video_processor
 from api.main import app
+from api.routes.media import get_video_processor
 from fastapi.testclient import TestClient
 
 # Create mock processor
@@ -35,34 +35,37 @@ def client_with_mock():
 
 def test_translate_video_endpoint(client_with_mock):
     """Test /media/translate/video endpoint with mocked processor."""
-    # Create dummy video file content (not a real video, but bytes)
-    # The mock processor accepts any bytes
+    # Mock for continuous mode which is the default
+    mock_processor.process_video_sliding_window.return_value = [
+        {"start_time": 0, "end_time": 1, "features": np.zeros(226)}
+    ]
+
     video_content = b"fake-video-content"
-    
     response = client_with_mock.post(
         "/api/v1/media/translate/video",
-        files={"file": ("test.mp4", video_content, "video/mp4")}
+        data={"mode": "continuous"},
+        files={"file": ("test.mp4", video_content, "video/mp4")},
     )
 
     assert response.status_code == 200
     data = response.json()
-    
+
     assert "word" in data
     assert "confidence" in data
     assert "extraction_time_ms" in data
     assert "prediction_time_ms" in data
     assert "total_time_ms" in data
     assert data["frames_processed"] == 30
-    
+
     # Verify mock was called
-    mock_processor.process_video_bytes.assert_called_once()
+    mock_processor.process_video_sliding_window.assert_called_once()
 
 
 def test_translate_video_invalid_file_type(client_with_mock):
     """Test invalid file type rejection."""
     response = client_with_mock.post(
         "/api/v1/media/translate/video",
-        files={"file": ("test.txt", b"text content", "text/plain")}
+        files={"file": ("test.txt", b"text content", "text/plain")},
     )
 
     assert response.status_code == 400

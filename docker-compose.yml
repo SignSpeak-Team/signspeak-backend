@@ -1,42 +1,43 @@
-version: "3.9"
-
 services:
   api-gateway:
     build: ./services/api_gateway
     container_name: api-gateway
     ports:
-      - "8000:8000"
+      - "8000:8080"
     depends_on:
       - translation-service
       - vision-service
     environment:
-      TRANSLATION_SERVICE_URL: http://translation-service:8001
-      VISION_SERVICE_URL: http://vision-service:8002
+      TRANSLATION_SERVICE_URL: http://translation-service:8080
+      VISION_SERVICE_URL: http://vision-service:8080
+      PORT: 8080
 
   translation-service:
     build: ./services/translation_service
     container_name: translation-service
     ports:
-      - "8001:8001"
+      - "8001:8080"
     depends_on:
       - vision-service
     environment:
-      VISION_SERVICE_URL: http://vision-service:8002
+      VISION_SERVICE_URL: http://vision-service:8080
+      PORT: 8080
 
   vision-service:
     build: ./services/vision_service
     container_name: vision-service
     ports:
-      - "8002:8000"
+      - "8002:8080"
     environment:
       - PYTHONUNBUFFERED=1
+      - PORT=8080
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 60s
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 3G

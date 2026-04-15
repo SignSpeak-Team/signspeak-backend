@@ -58,6 +58,7 @@ def gateway_sync_client(gateway_base_url):
 
 # === Test Data Fixtures ===
 
+
 @pytest.fixture
 def sample_landmarks():
     """21 landmarks x 3 coordenadas para testing."""
@@ -79,6 +80,7 @@ def sample_holistic_features():
 
 # === Service Health Check ===
 
+
 @pytest.fixture(scope="session", autouse=True)
 def check_services_availability(vision_base_url, gateway_base_url):
     """Verifica que los servicios estén disponibles antes de correr tests."""
@@ -86,9 +88,9 @@ def check_services_availability(vision_base_url, gateway_base_url):
         "Vision Service": vision_base_url,
         "API Gateway": gateway_base_url,
     }
-    
+
     unavailable = []
-    
+
     for name, url in services.items():
         try:
             with httpx.Client(timeout=5.0) as client:
@@ -99,9 +101,10 @@ def check_services_availability(vision_base_url, gateway_base_url):
             unavailable.append(f"{name} ({url}): no conecta")
         except Exception as e:
             unavailable.append(f"{name} ({url}): {e}")
-    
+
     if unavailable:
         pytest.skip(
-            f"Servicios no disponibles:\n" + "\n".join(unavailable) +
-            "\n\nAsegúrate de que los servicios estén corriendo."
+            "Servicios no disponibles:\n"
+            + "\n".join(unavailable)
+            + "\n\nAsegúrate de que los servicios estén corriendo."
         )
