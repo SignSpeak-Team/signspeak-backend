@@ -1,0 +1,613 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SignSpeak Vision API",
+    "description": "API REST para reconocimiento de lenguaje de señas mexicano (LSM)",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "description": "Verifica el estado del servicio.\n\nReturns:\n    HealthResponse con status, version y estado de modelos",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/models": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Models Information",
+        "description": "Retorna información sobre los modelos ML cargados.\n\nReturns:\n    ModelsInfoResponse con info de modelos estático y dinámico",
+        "operationId": "models_info_api_v1_health_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/static": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Static",
+        "description": "Predict static letter (21 landmarks → 63 features).",
+        "operationId": "predict_static_api_v1_predict_static_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LandmarksRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/dynamic": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Dynamic",
+        "description": "Predict dynamic letter (15 frames × 63 features).",
+        "operationId": "predict_dynamic_api_v1_predict_dynamic_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SequenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/words": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Words",
+        "description": "Predict word with buffer filtering (15 frames × 63 features).",
+        "operationId": "predict_words_api_v1_predict_words_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SequenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/holistic": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Holistic",
+        "description": "Predict medical word (226 holistic features: pose + hands).",
+        "operationId": "predict_holistic_api_v1_predict_holistic_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolisticRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/words/stats": {
+      "get": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Get Word Buffer Stats",
+        "description": "Get word buffer statistics.",
+        "operationId": "get_word_buffer_stats_api_v1_predict_words_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BufferStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/words/clear": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Clear Word Buffer",
+        "description": "Clear word buffer and phrase.",
+        "operationId": "clear_word_buffer_api_v1_predict_words_clear_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/holistic/clear": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Clear Holistic Buffer",
+        "description": "Clear holistic buffer.",
+        "operationId": "clear_holistic_buffer_api_v1_predict_holistic_clear_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "summary": "Root",
+        "description": "Endpoint raíz - Información básica de la API",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BufferStatsResponse": {
+        "properties": {
+          "total_received": {
+            "type": "integer",
+            "title": "Total Received"
+          },
+          "total_accepted": {
+            "type": "integer",
+            "title": "Total Accepted"
+          },
+          "rejected_by_cooldown": {
+            "type": "integer",
+            "title": "Rejected By Cooldown"
+          },
+          "rejected_by_confidence": {
+            "type": "integer",
+            "title": "Rejected By Confidence"
+          },
+          "acceptance_rate": {
+            "type": "number",
+            "title": "Acceptance Rate"
+          },
+          "current_phrase": {
+            "type": "string",
+            "title": "Current Phrase"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_received",
+          "total_accepted",
+          "rejected_by_cooldown",
+          "rejected_by_confidence",
+          "acceptance_rate",
+          "current_phrase"
+        ],
+        "title": "BufferStatsResponse",
+        "description": "Word buffer statistics."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "unhealthy"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "models_loaded": {
+            "type": "boolean",
+            "title": "Models Loaded"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "models_loaded"
+        ],
+        "title": "HealthResponse",
+        "description": "Service health check."
+      },
+      "HolisticRequest": {
+        "properties": {
+          "landmarks": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 226,
+            "minItems": 226,
+            "title": "Landmarks",
+            "description": "226 holistic features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "landmarks"
+        ],
+        "title": "HolisticRequest",
+        "description": "Holistic prediction: 226 features (pose + hands)."
+      },
+      "LandmarksRequest": {
+        "properties": {
+          "landmarks": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "maxItems": 21,
+            "minItems": 21,
+            "title": "Landmarks",
+            "description": "21 landmarks [x,y,z] each"
+          }
+        },
+        "type": "object",
+        "required": [
+          "landmarks"
+        ],
+        "title": "LandmarksRequest",
+        "description": "Static prediction: 21 hand landmarks (63 features)."
+      },
+      "ModelsInfoResponse": {
+        "properties": {
+          "static": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Static"
+          },
+          "dynamic": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Dynamic"
+          },
+          "words": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Words"
+          },
+          "holistic": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Holistic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "static",
+          "dynamic",
+          "words",
+          "holistic"
+        ],
+        "title": "ModelsInfoResponse",
+        "description": "Models information."
+      },
+      "PredictionResponse": {
+        "properties": {
+          "letter": {
+            "type": "string",
+            "title": "Letter"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "static",
+              "dynamic"
+            ],
+            "title": "Type"
+          },
+          "processing_time_ms": {
+            "type": "number",
+            "title": "Processing Time Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "letter",
+          "confidence",
+          "type",
+          "processing_time_ms"
+        ],
+        "title": "PredictionResponse",
+        "description": "Letter prediction response."
+      },
+      "SequenceRequest": {
+        "properties": {
+          "sequence": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "maxItems": 15,
+            "minItems": 15,
+            "title": "Sequence",
+            "description": "15 frames, each with 21 landmarks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sequence"
+        ],
+        "title": "SequenceRequest",
+        "description": "Dynamic/Words prediction: 15 frames x 21 landmarks."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WordPredictionResponse": {
+        "properties": {
+          "word": {
+            "type": "string",
+            "title": "Word"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "phrase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phrase",
+            "default": ""
+          },
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted",
+            "default": true
+          },
+          "processing_time_ms": {
+            "type": "number",
+            "title": "Processing Time Ms",
+            "default": 0
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "word",
+          "confidence"
+        ],
+        "title": "WordPredictionResponse",
+        "description": "Word prediction response."
+      }
+    }
+  }
+}
