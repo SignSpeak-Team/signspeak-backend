@@ -1,0 +1,1031 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API Gateway",
+    "description": "API Gateway para SignSpeak - Sistema de traducción de LSM",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Root",
+        "description": "Root endpoint with API information.",
+        "operationId": "root_api_v1__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "description": "Simple health check for container orchestration.\n\nReturns minimal response for fast health checks.",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "System Status",
+        "description": "Detailed system status with downstream service checks.\n\nIncludes uptime, environment info, and health of connected services.",
+        "operationId": "system_status_api_v1_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/translate/": {
+      "post": {
+        "tags": [
+          "Translation"
+        ],
+        "summary": "Translate Sign Language",
+        "operationId": "translate_sign_language_api_v1_translate__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/static": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Static Letter",
+        "description": "Predict a static letter (A-Z except J, K, Q, X, Z, Ñ) from 21 hand landmarks.",
+        "operationId": "predict_static_letter_api_v1_predict_static_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LandmarksRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LetterPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/dynamic": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Dynamic Letter",
+        "description": "Predict a dynamic letter (J, K, Q, X, Z, Ñ) from 15 frames of landmarks.",
+        "operationId": "predict_dynamic_letter_api_v1_predict_dynamic_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SequenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LetterPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/words": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Word",
+        "description": "Predict a word from 249-word LSM vocabulary using 15 frames of landmarks.",
+        "operationId": "predict_word_api_v1_predict_words_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SequenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/holistic": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Predict Medical Word",
+        "description": "Predict a medical vocabulary word (150 words) from holistic body features.",
+        "operationId": "predict_medical_word_api_v1_predict_holistic_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolisticRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/words/stats": {
+      "get": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Get Buffer Statistics",
+        "description": "Get word buffer and phrase statistics.",
+        "operationId": "get_buffer_stats_api_v1_predict_words_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BufferStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/words/clear": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Clear Word Buffer",
+        "description": "Clear word prediction buffer and accumulated phrase.",
+        "operationId": "clear_words_api_v1_predict_words_clear_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict/holistic/clear": {
+      "post": {
+        "tags": [
+          "Prediction"
+        ],
+        "summary": "Clear Holistic Buffer",
+        "description": "Clear holistic prediction buffer.",
+        "operationId": "clear_holistic_api_v1_predict_holistic_clear_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BufferStatsResponse": {
+        "properties": {
+          "buffer_size": {
+            "type": "integer",
+            "title": "Buffer Size",
+            "description": "Current buffer size"
+          },
+          "phrase_length": {
+            "type": "integer",
+            "title": "Phrase Length",
+            "description": "Current phrase word count"
+          },
+          "current_phrase": {
+            "type": "string",
+            "title": "Current Phrase",
+            "description": "Current accumulated phrase"
+          }
+        },
+        "type": "object",
+        "required": [
+          "buffer_size",
+          "phrase_length",
+          "current_phrase"
+        ],
+        "title": "BufferStatsResponse",
+        "description": "Response for buffer statistics."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HolisticRequest": {
+        "properties": {
+          "landmarks": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 226,
+            "minItems": 226,
+            "title": "Landmarks",
+            "description": "226 holistic features: pose (33×4) + left hand (21×3) + right hand (21×3)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "landmarks"
+        ],
+        "title": "HolisticRequest",
+        "description": "Request for holistic (medical vocabulary) prediction.",
+        "example": {
+          "landmarks": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+        }
+      },
+      "LandmarksRequest": {
+        "properties": {
+          "landmarks": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "maxItems": 21,
+            "minItems": 21,
+            "title": "Landmarks",
+            "description": "21 hand landmarks, each with [x, y, z] coordinates (0.0-1.0)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "landmarks"
+        ],
+        "title": "LandmarksRequest",
+        "description": "Request for static letter prediction (21 hand landmarks).",
+        "example": {
+          "landmarks": [
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0],
+            [0.5, 0.5, 0.0]
+          ]
+        }
+      },
+      "LetterPredictionResponse": {
+        "properties": {
+          "letter": {
+            "type": "string",
+            "title": "Letter",
+            "description": "Predicted letter (A-Z, Ñ)"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Confidence percentage (0-100)"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Prediction type: 'static' or 'dynamic'"
+          },
+          "processing_time_ms": {
+            "type": "number",
+            "title": "Processing Time Ms",
+            "description": "Processing time in milliseconds",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "letter",
+          "confidence",
+          "type"
+        ],
+        "title": "LetterPredictionResponse",
+        "description": "Response for letter prediction (static or dynamic)."
+      },
+      "SequenceRequest": {
+        "properties": {
+          "sequence": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "maxItems": 15,
+            "minItems": 15,
+            "title": "Sequence",
+            "description": "15 frames, each with 21 landmarks × 3 coordinates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sequence"
+        ],
+        "title": "SequenceRequest",
+        "description": "Request for dynamic letter or word prediction (sequence of frames).",
+        "example": {
+          "sequence": [
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ],
+            [
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0],
+              [0.5, 0.5, 0.0]
+            ]
+          ]
+        }
+      },
+      "TranslateRequest": {
+        "properties": {
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Url",
+            "description": "URL del video a traducir (opcional por ahora)"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Texto alternativo si no hay video"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "Lenguaje de señas (por defecto LSM - Lenguaje de Señas Mexicano)",
+            "default": "LSM"
+          }
+        },
+        "type": "object",
+        "title": "TranslateRequest",
+        "example": {
+          "language": "LSM",
+          "video_url": "https://example.com/video.mp4"
+        }
+      },
+      "TranslateResponse": {
+        "properties": {
+          "translation_id": {
+            "type": "string",
+            "title": "Translation Id",
+            "description": "ID único de la traducción"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Texto traducido"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Nivel de confianza de la traducción (0-1)"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Estado: 'processing', 'completed', 'failed'"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Fecha y hora de creación"
+          }
+        },
+        "type": "object",
+        "required": [
+          "translation_id",
+          "text",
+          "confidence",
+          "status"
+        ],
+        "title": "TranslateResponse",
+        "example": {
+          "confidence": 0.95,
+          "created_at": "2024-12-20T22:00:00",
+          "status": "completed",
+          "text": "Hola, ¿cómo estás?",
+          "translation_id": "trans_abc123"
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WordPredictionResponse": {
+        "properties": {
+          "word": {
+            "type": "string",
+            "title": "Word",
+            "description": "Predicted word"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Confidence percentage (0-100)"
+          },
+          "phrase": {
+            "type": "string",
+            "title": "Phrase",
+            "description": "Accumulated phrase from predictions",
+            "default": ""
+          },
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted",
+            "description": "Whether the prediction was accepted to the phrase",
+            "default": false
+          },
+          "processing_time_ms": {
+            "type": "number",
+            "title": "Processing Time Ms",
+            "description": "Processing time in milliseconds",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "word",
+          "confidence"
+        ],
+        "title": "WordPredictionResponse",
+        "description": "Response for word prediction."
+      }
+    }
+  }
+}
