@@ -20,7 +20,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: |
+          pip install -r requirements-dev.txt
+          if [ -f services/api_gateway/requirements.txt ]; then pip install -r services/api_gateway/requirements.txt; fi
+          if [ -f services/vision_service/requirements.txt ]; then pip install -r services/vision_service/requirements.txt; fi
 
       - name: Run tests with coverage
         run: |
@@ -28,6 +31,8 @@ jobs:
             --cov=services \
             --cov-report=xml:coverage.xml \
             -v
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/services/api_gateway:${{ github.workspace }}/services/vision_service/src
         continue-on-error: true
 
       - name: SonarCloud Scan
