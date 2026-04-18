@@ -22,7 +22,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements-dev.txt
-          find services -name "requirements.txt" -exec pip install -r {} +
+          pip install -r services/api_gateway/requirements.txt
+          pip install -r services/translation_service/requirements.txt
+          pip install -r services/vision_service/requirements.txt
 
       - name: Run tests with coverage
         run: |
