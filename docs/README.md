@@ -460,8 +460,10 @@ Distribuido bajo la licencia **MIT**. Ver [`LICENSE`](LICENSE) para más detalle
 
 <div align="center">
 
-Hecho con ❤️, **FastAPI**, **TensorFlow** y mucho ☕
-
-[🐛 Reportar un bug](https://github.com/alanctinaDev/signSpeak/issues) · [💡 Solicitar feature](https://github.com/alanctinaDev/signSpeak/issues) · [📖 Swagger UI](http://localhost:8000/docs)
-
-</div>
+Alan de los Santos Lopez Cetina — Matrícula: 2202116
+Ángel Jonás Rosales Gonzales — Matrícula: 2202022
+José Arturo González Flores — Matrícula: 2202012
+Cesar Enrique Bernal Zurita— Matrícula: 2201100
+Ángel David Quintana Pacheco — Matrícula: 2102165
+Cristian Daniel Lázaro Acosta — Matrícula: 2202055
+Ángel Adrián Yam Huchim — Matricula: 2202109
