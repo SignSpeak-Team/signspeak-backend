@@ -1,42 +1,19 @@
-name: SonarCloud Analysis
-
+name: Build
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
-
+    types: [opened, synchronize, reopened]
 jobs:
-  sonarcloud:
+  sonarqube:
+    name: SonarQube
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements-dev.txt
-          if [ -f services/api_gateway/requirements.txt ]; then pip install -r services/api_gateway/requirements.txt; fi
-          if [ -f services/vision_service/requirements.txt ]; then pip install -r services/vision_service/requirements.txt; fi
-
-      - name: Run tests with coverage
-        run: |
-          pytest tests/unit/ \
-            --cov=services \
-            --cov-report=xml:coverage.xml \
-            -v
-        env:
-          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/services/api_gateway:${{ github.workspace }}/services/vision_service/src
-        continue-on-error: true
-
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
