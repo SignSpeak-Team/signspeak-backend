@@ -110,3 +110,13 @@ terraform destroy
 ```
 
 > ⚠️ Esto eliminará **todos** los recursos. Los repositorios ECR se destruyen con sus imágenes si `force_delete = true`.
+
+Hecho con ❤️ por
+
+Alan de los Santos Lopez Cetina — Matrícula: 2202116
+Ángel Jonás Rosales Gonzales — Matrícula: 2202022
+José Arturo González Flores — Matrícula: 2202012
+Cesar Enrique Bernal Zurita— Matrícula: 2201100
+Ángel David Quintana Pacheco — Matrícula: 2102165
+Cristian Daniel Lázaro Acosta — Matrícula: 2202055
+Ángel Adrián Yam Huchim — Matricula: 2202109
