@@ -42,29 +42,19 @@ async def predict_static(
     - 17-20: PINKY
     """
     try:
-        # Normalize relative to wrist (landmark 0)
         raw_lms = request.landmarks
         wrist = raw_lms[0]
 
-        # Calculate Hand Scale (Distance from wrist to middle finger base)
-        # mid_base = raw_lms[9]
-        # scale = sqrt((x9-x0)^2 + (y9-y0)^2 + (z9-z0)^2)
-        mid_base = raw_lms[9]
-        scale = np.sqrt(sum((mid_base[i] - wrist[i]) ** 2 for i in range(3)))
-        if scale < 1e-6:
-            scale = 1.0  # Safety
-
-        normalized = []
-
-        # Determine if we should flip X (mirroring fix)
-        # Based on user testing: Left hand works, Right hand fails.
-        # We flip if handedness is 'Left' to match the 'Right' hand orientation the model expects.
+        # Flip X cuando la mano es izquierda para convertirla a orientación de mano derecha
+        # (como fue entrenado el modelo con imágenes de mano derecha del dataset LSM)
+        # MediaPipe Tasks API con cámara espejada: mano derecha real → reportada como 'Right'
         flip_x = request.handedness == "Left"
 
+        normalized = []
         for lm in raw_lms:
-            dx = (lm[0] - wrist[0]) / scale
-            dy = (lm[1] - wrist[1]) / scale
-            dz = (lm[2] - wrist[2]) / scale
+            dx = lm[0] - wrist[0]
+            dy = lm[1] - wrist[1]
+            dz = lm[2] - wrist[2]
 
             if flip_x:
                 dx = -dx
@@ -83,22 +73,16 @@ async def predict_dynamic(
 ):
     """Predict dynamic letter (15 frames × 63 features)."""
     try:
-        # Normalize each frame relative to its own wrist
         normalized_sequence = []
         flip_x = request.handedness == "Left"
 
         for frame in request.sequence:
             wrist = frame[0]
-            mid_base = frame[9]
-            scale = np.sqrt(sum((mid_base[i] - wrist[i]) ** 2 for i in range(3)))
-            if scale < 1e-6:
-                scale = 1.0  # Safety
-
             norm_frame = []
             for lm in frame:
-                dx = (lm[0] - wrist[0]) / scale
-                dy = (lm[1] - wrist[1]) / scale
-                dz = (lm[2] - wrist[2]) / scale
+                dx = lm[0] - wrist[0]
+                dy = lm[1] - wrist[1]
+                dz = lm[2] - wrist[2]
 
                 if flip_x:
                     dx = -dx
@@ -124,18 +108,12 @@ async def predict_words(
         flip_x = request.handedness == "Left"
 
         for frame in request.sequence:
-            # Normalize relative to wrist (landmark 0)
             wrist = frame[0]
-            mid_base = frame[9]
-            scale = np.sqrt(sum((mid_base[i] - wrist[i]) ** 2 for i in range(3)))
-            if scale < 1e-6:
-                scale = 1.0  # Safety
-
             norm_landmarks = []
             for lm in frame:
-                dx = (lm[0] - wrist[0]) / scale
-                dy = (lm[1] - wrist[1]) / scale
-                dz = (lm[2] - wrist[2]) / scale
+                dx = lm[0] - wrist[0]
+                dy = lm[1] - wrist[1]
+                dz = lm[2] - wrist[2]
 
                 if flip_x:
                     dx = -dx
